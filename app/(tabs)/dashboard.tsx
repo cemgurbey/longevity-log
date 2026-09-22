@@ -66,10 +66,11 @@ function last7Dates(): string[] {
 }
 
 /**
- * ISO dates of the Monday–Sunday week containing today, shifted back `offset`
- * weeks, newest first. The current week only includes days up to today.
+ * ISO dates for the selected week, newest first. The current week is the last
+ * 7 days ending today; previous weeks are full Monday–Sunday calendar weeks.
  */
 function weekDates(offset: number): string[] {
+  if (offset === 0) return last7Dates();
   const today = new Date();
   const daysSinceMonday = (today.getDay() + 6) % 7;
   const monday = new Date(
@@ -77,9 +78,8 @@ function weekDates(offset: number): string[] {
     today.getMonth(),
     today.getDate() - daysSinceMonday - offset * 7,
   );
-  const count = offset === 0 ? daysSinceMonday + 1 : 7;
   const dates: string[] = [];
-  for (let i = count - 1; i >= 0; i--) {
+  for (let i = 6; i >= 0; i--) {
     dates.push(
       toLocalDateString(new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + i)),
     );
