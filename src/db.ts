@@ -136,22 +136,25 @@ export async function getFoodLogs(db: SQLiteDatabase, limit = 500): Promise<Food
   );
 }
 
-/** Most recently used unique exercise names, for quick-add chips. */
-export async function getRecentExerciseNames(db: SQLiteDatabase, limit = 8): Promise<string[]> {
-  const rows = await db.getAllAsync<{ exercise: string }>(
-    'SELECT exercise FROM exercise_logs GROUP BY exercise ORDER BY MAX(id) DESC LIMIT ?',
+/** Most recent log per exercise name (for quick-add), newest first. */
+export async function getRecentExerciseLogs(db: SQLiteDatabase, limit = 8): Promise<ExerciseLog[]> {
+  return db.getAllAsync<ExerciseLog>(
+    `SELECT id, date, exercise, sets, reps, weight, weight_unit, duration_min, distance_m
+     FROM exercise_logs
+     WHERE id IN (SELECT MAX(id) FROM exercise_logs GROUP BY exercise)
+     ORDER BY id DESC LIMIT ?`,
     limit,
   );
-  return rows.map((r) => r.exercise);
 }
 
-/** Most recently used unique food names, for quick-add chips. */
-export async function getRecentFoodNames(db: SQLiteDatabase, limit = 8): Promise<string[]> {
-  const rows = await db.getAllAsync<{ name: string }>(
-    'SELECT name FROM food_logs GROUP BY name ORDER BY MAX(id) DESC LIMIT ?',
+/** Most recent log per food name (for quick-add), newest first. */
+export async function getRecentFoodLogs(db: SQLiteDatabase, limit = 8): Promise<FoodLog[]> {
+  return db.getAllAsync<FoodLog>(
+    `SELECT id, date, name, grams FROM food_logs
+     WHERE id IN (SELECT MAX(id) FROM food_logs GROUP BY name)
+     ORDER BY id DESC LIMIT ?`,
     limit,
   );
-  return rows.map((r) => r.name);
 }
 
 export interface DayStats {

@@ -4,14 +4,15 @@ import { router, useFocusEffect } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 
 import { Chip, DateField, Field, PrimaryButton, Screen, useThemeColors } from '@/src/ui';
-import { getRecentFoodNames, insertFoodLog, todayLocal } from '@/src/db';
+import { getRecentFoodLogs, insertFoodLog, todayLocal } from '@/src/db';
+import type { FoodLog } from '@/src/db';
 
 export default function LogMealScreen() {
   const db = useSQLiteContext();
   const c = useThemeColors();
   const [date, setDate] = useState(todayLocal());
   const [name, setName] = useState('');
-  const [recent, setRecent] = useState<string[]>([]);
+  const [recent, setRecent] = useState<FoodLog[]>([]);
   const [grams, setGrams] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -19,14 +20,20 @@ export default function LogMealScreen() {
     useCallback(() => {
       let alive = true;
       (async () => {
-        const names = await getRecentFoodNames(db);
-        if (alive) setRecent(names);
+        const rows = await getRecentFoodLogs(db);
+        if (alive) setRecent(rows);
       })();
       return () => {
         alive = false;
       };
     }, [db]),
   );
+
+  /** Fill the whole form from a previous entry (everything except the date). */
+  function applyRecent(f: FoodLog) {
+    setName(f.name);
+    setGrams(f.grams != null ? String(f.grams) : '');
+  }
 
   async function save() {
     if (saving) return;
@@ -59,12 +66,12 @@ export default function LogMealScreen() {
               Recent foods
             </Text>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
-              {recent.map((food) => (
+              {recent.map((entry) => (
                 <Chip
-                  key={food}
-                  label={food}
-                  selected={name.trim().toLowerCase() === food.toLowerCase()}
-                  onPress={() => setName(food)}
+                  key={entry.name}
+                  label={entry.name}
+                  selected={name.trim().toLowerCase() === entry.name.toLowerCase()}
+                  onPress={() => applyRecent(entry)}
                 />
               ))}
             </View>

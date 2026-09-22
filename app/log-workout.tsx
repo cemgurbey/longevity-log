@@ -4,8 +4,8 @@ import { router, useFocusEffect } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 
 import { Chip, DateField, Field, PrimaryButton, Screen, useThemeColors } from '@/src/ui';
-import { getRecentExerciseNames, insertExerciseLog, todayLocal } from '@/src/db';
-import type { WeightUnit } from '@/src/db';
+import { getRecentExerciseLogs, insertExerciseLog, todayLocal } from '@/src/db';
+import type { ExerciseLog, WeightUnit } from '@/src/db';
 
 const UNITS: WeightUnit[] = ['kg', 'lb'];
 
@@ -14,7 +14,7 @@ export default function LogWorkoutScreen() {
   const c = useThemeColors();
   const [date, setDate] = useState(todayLocal());
   const [exercise, setExercise] = useState('');
-  const [recent, setRecent] = useState<string[]>([]);
+  const [recent, setRecent] = useState<ExerciseLog[]>([]);
   const [sets, setSets] = useState('');
   const [reps, setReps] = useState('');
   const [weight, setWeight] = useState('');
@@ -27,14 +27,25 @@ export default function LogWorkoutScreen() {
     useCallback(() => {
       let alive = true;
       (async () => {
-        const names = await getRecentExerciseNames(db);
-        if (alive) setRecent(names);
+        const rows = await getRecentExerciseLogs(db);
+        if (alive) setRecent(rows);
       })();
       return () => {
         alive = false;
       };
     }, [db]),
   );
+
+  /** Fill the whole form from a previous entry (everything except the date). */
+  function applyRecent(e: ExerciseLog) {
+    setExercise(e.exercise);
+    setSets(e.sets != null ? String(e.sets) : '');
+    setReps(e.reps != null ? String(e.reps) : '');
+    setWeight(e.weight != null ? String(e.weight) : '');
+    if (e.weight_unit) setUnit(e.weight_unit);
+    setDuration(e.duration_min != null ? String(e.duration_min) : '');
+    setDistance(e.distance_m != null ? String(e.distance_m) : '');
+  }
 
   const toNum = (s: string): number | null => (s.trim() === '' ? null : parseFloat(s));
   const toInt = (s: string): number | null => {
@@ -80,12 +91,12 @@ export default function LogWorkoutScreen() {
               Recent exercises
             </Text>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
-              {recent.map((name) => (
+              {recent.map((entry) => (
                 <Chip
-                  key={name}
-                  label={name}
-                  selected={exercise.trim().toLowerCase() === name.toLowerCase()}
-                  onPress={() => setExercise(name)}
+                  key={entry.exercise}
+                  label={entry.exercise}
+                  selected={exercise.trim().toLowerCase() === entry.exercise.toLowerCase()}
+                  onPress={() => applyRecent(entry)}
                 />
               ))}
             </View>
