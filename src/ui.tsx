@@ -1,12 +1,11 @@
 import type { ReactNode } from 'react';
 import { useState } from 'react';
 import {
-  InputAccessoryView,
-  Keyboard,
   KeyboardAvoidingView,
   Modal,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -42,32 +41,15 @@ export function FormScreen({ children, style }: { children: ReactNode; style?: V
   );
 }
 
-const DONE_ACCESSORY_ID = 'longevity-done-accessory';
-
-/**
- * iOS toolbar above the keyboard with a Done button. Number pads have no
- * return key, so this is the way to dismiss the keyboard.
- * Render once per screen that contains text inputs.
- */
-export function KeyboardDoneBar() {
-  const c = useThemeColors();
-  if (Platform.OS !== 'ios') return null;
+/** Form scroll container: dragging down dismisses the keyboard (interactive on iOS, like Messages). */
+export function FormScrollView({ children }: { children: ReactNode }) {
   return (
-    <InputAccessoryView nativeID={DONE_ACCESSORY_ID}>
-      <View
-        style={{
-          backgroundColor: c.card,
-          borderTopWidth: StyleSheet.hairlineWidth,
-          borderTopColor: c.border,
-          paddingHorizontal: 8,
-          paddingVertical: 4,
-          alignItems: 'flex-end',
-        }}>
-        <Pressable onPress={() => Keyboard.dismiss()} hitSlop={12}>
-          <Text style={{ color: c.accent, fontSize: 16, fontWeight: '700', padding: 8 }}>Done</Text>
-        </Pressable>
-      </View>
-    </InputAccessoryView>
+    <ScrollView
+      showsVerticalScrollIndicator={false}
+      keyboardShouldPersistTaps="handled"
+      keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}>
+      {children}
+    </ScrollView>
   );
 }
 
@@ -172,7 +154,6 @@ export function Field({ label, value, onChangeText, ...rest }: FieldProps) {
         value={value}
         onChangeText={onChangeText}
         placeholderTextColor={c.sub}
-        inputAccessoryViewID={Platform.OS === 'ios' ? DONE_ACCESSORY_ID : undefined}
         style={{
           backgroundColor: c.card,
           borderColor: c.border,

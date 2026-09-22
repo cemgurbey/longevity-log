@@ -3,7 +3,7 @@ import { Alert, ScrollView, Text, View } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 
-import { Chip, FormScreen, KeyboardDoneBar, PrimaryButton, useThemeColors } from '@/src/ui';
+import { Chip, FormScreen, FormScrollView, PrimaryButton, useThemeColors } from '@/src/ui';
 import { getRecentFoodLogs, insertFoodLog } from '@/src/db';
 import type { FoodLog } from '@/src/db';
 import { FoodFormFields, emptyFoodForm, parseFoodForm } from '@/src/food-form';
@@ -57,8 +57,7 @@ export default function LogMealScreen() {
 
   return (
     <FormScreen>
-      <KeyboardDoneBar />
-      <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+      <FormScrollView>
         {recent.length > 0 && (
           <View style={{ marginBottom: 10 }}>
             <Text style={{ color: c.sub, fontSize: 13, fontWeight: '600', marginBottom: 6 }}>
@@ -83,7 +82,7 @@ export default function LogMealScreen() {
 
         <PrimaryButton title={saving ? 'Saving…' : 'Save food'} onPress={save} disabled={saving} />
         <View style={{ height: 32 }} />
-      </ScrollView>
+      </FormScrollView>
     </FormScreen>
   );
 }

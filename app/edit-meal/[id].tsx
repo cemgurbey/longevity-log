@@ -1,9 +1,9 @@
 import { useCallback, useState } from 'react';
-import { Alert, ScrollView, View } from 'react-native';
+import { Alert, View } from 'react-native';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 
-import { DangerButton, EmptyState, FormScreen, KeyboardDoneBar, Muted, PrimaryButton } from '@/src/ui';
+import { DangerButton, EmptyState, FormScreen, FormScrollView, Muted, PrimaryButton } from '@/src/ui';
 import { deleteFoodLog, getFoodLogById, updateFoodLog } from '@/src/db';
 import { FoodFormFields, foodToFormValue, parseFoodForm } from '@/src/food-form';
 import type { FoodFormValue } from '@/src/food-form';
@@ -64,8 +64,7 @@ export default function EditMealScreen() {
 
   return (
     <FormScreen>
-      <KeyboardDoneBar />
-      <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+      <FormScrollView>
         {!loaded ? (
           <Muted>Loading…</Muted>
         ) : form == null ? (
@@ -82,7 +81,7 @@ export default function EditMealScreen() {
             <View style={{ height: 32 }} />
           </View>
         )}
-      </ScrollView>
+      </FormScrollView>
     </FormScreen>
   );
 }
