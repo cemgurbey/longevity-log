@@ -12,7 +12,7 @@ export default function NotFoundScreen() {
         <Muted>Let&apos;s get you back on track.</Muted>
         <View style={{ height: 16 }} />
         <View style={{ width: '100%' }}>
-          <PrimaryButton title="Go to home" onPress={() => router.replace('/(tabs)')} />
+          <PrimaryButton title="Go to home" onPress={() => router.replace('/(tabs)/workouts')} />
         </View>
       </View>
     </Screen>
