@@ -90,16 +90,18 @@ export default function LogWorkoutScreen() {
             <Text style={{ color: c.sub, fontSize: 13, fontWeight: '600', marginBottom: 6 }}>
               Recent exercises
             </Text>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
-              {recent.map((entry) => (
-                <Chip
-                  key={entry.exercise}
-                  label={entry.exercise}
-                  selected={exercise.trim().toLowerCase() === entry.exercise.toLowerCase()}
-                  onPress={() => applyRecent(entry)}
-                />
-              ))}
-            </View>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 2 }}>
+                {recent.map((entry) => (
+                  <Chip
+                    key={entry.exercise}
+                    label={entry.exercise}
+                    selected={exercise.trim().toLowerCase() === entry.exercise.toLowerCase()}
+                    onPress={() => applyRecent(entry)}
+                  />
+                ))}
+              </View>
+            </ScrollView>
           </View>
         )}
 

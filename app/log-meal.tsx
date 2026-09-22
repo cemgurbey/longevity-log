@@ -65,16 +65,18 @@ export default function LogMealScreen() {
             <Text style={{ color: c.sub, fontSize: 13, fontWeight: '600', marginBottom: 6 }}>
               Recent foods
             </Text>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
-              {recent.map((entry) => (
-                <Chip
-                  key={entry.name}
-                  label={entry.name}
-                  selected={name.trim().toLowerCase() === entry.name.toLowerCase()}
-                  onPress={() => applyRecent(entry)}
-                />
-              ))}
-            </View>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 2 }}>
+                {recent.map((entry) => (
+                  <Chip
+                    key={entry.name}
+                    label={entry.name}
+                    selected={name.trim().toLowerCase() === entry.name.toLowerCase()}
+                    onPress={() => applyRecent(entry)}
+                  />
+                ))}
+              </View>
+            </ScrollView>
           </View>
         )}
 

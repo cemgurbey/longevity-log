@@ -137,7 +137,7 @@ export async function getFoodLogs(db: SQLiteDatabase, limit = 500): Promise<Food
 }
 
 /** Most recent log per exercise name (for quick-add), newest first. */
-export async function getRecentExerciseLogs(db: SQLiteDatabase, limit = 8): Promise<ExerciseLog[]> {
+export async function getRecentExerciseLogs(db: SQLiteDatabase, limit = 20): Promise<ExerciseLog[]> {
   return db.getAllAsync<ExerciseLog>(
     `SELECT id, date, exercise, sets, reps, weight, weight_unit, duration_min, distance_m
      FROM exercise_logs
@@ -148,7 +148,7 @@ export async function getRecentExerciseLogs(db: SQLiteDatabase, limit = 8): Prom
 }
 
 /** Most recent log per food name (for quick-add), newest first. */
-export async function getRecentFoodLogs(db: SQLiteDatabase, limit = 8): Promise<FoodLog[]> {
+export async function getRecentFoodLogs(db: SQLiteDatabase, limit = 20): Promise<FoodLog[]> {
   return db.getAllAsync<FoodLog>(
     `SELECT id, date, name, grams FROM food_logs
      WHERE id IN (SELECT MAX(id) FROM food_logs GROUP BY name)
