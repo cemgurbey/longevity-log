@@ -1,12 +1,13 @@
 import { useFonts } from 'expo-font';
-import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
+import { DarkTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
+import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import 'react-native-reanimated';
 import { SQLiteProvider } from 'expo-sqlite';
 
-import { useColorScheme } from '@/components/useColorScheme';
 import { migrateDbIfNeeded } from '@/src/db';
+import { palette } from '@/src/theme';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -43,16 +44,23 @@ export default function RootLayout() {
   return <RootLayoutNav />;
 }
 
-function RootLayoutNav() {
-  const colorScheme = useColorScheme();
+const c = palette.dark;
 
+function RootLayoutNav() {
   return (
     <SQLiteProvider databaseName="longevity.db" onInit={migrateDbIfNeeded}>
-      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-        <Stack>
+      <ThemeProvider value={DarkTheme}>
+        <StatusBar style="light" />
+        <Stack
+          screenOptions={{
+            headerStyle: { backgroundColor: c.bg },
+            headerTintColor: c.text,
+            headerTitleStyle: { fontWeight: '700' },
+            contentStyle: { backgroundColor: c.bg },
+          }}>
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen name="log-workout" options={{ presentation: 'modal', title: 'Log workout' }} />
-          <Stack.Screen name="log-meal" options={{ presentation: 'modal', title: 'Log meal' }} />
+          <Stack.Screen name="log-workout" options={{ presentation: 'modal', title: 'Log exercise' }} />
+          <Stack.Screen name="log-meal" options={{ presentation: 'modal', title: 'Log food' }} />
         </Stack>
       </ThemeProvider>
     </SQLiteProvider>

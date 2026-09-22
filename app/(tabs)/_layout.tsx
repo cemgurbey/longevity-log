@@ -1,48 +1,30 @@
 import { Tabs } from 'expo-router';
-import { Text } from 'react-native';
 
-import Colors from '@/constants/Colors';
-import { useColorScheme } from '@/components/useColorScheme';
+import { palette } from '@/src/theme';
 
-const ICONS = {
-  workouts: '🏋️',
-  meals: '🍽️',
-  dashboard: '📊',
-} as const;
-
-function TabIcon({ name }: { name: keyof typeof ICONS }) {
-  return <Text style={{ fontSize: 22 }}>{ICONS[name]}</Text>;
-}
+const c = palette.dark;
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
-
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
+        tabBarActiveTintColor: c.accent,
+        tabBarInactiveTintColor: c.sub,
+        tabBarStyle: {
+          backgroundColor: c.card,
+          borderTopColor: c.border,
+        },
+        headerStyle: {
+          backgroundColor: c.bg,
+        },
+        headerTintColor: c.text,
+        headerTitleStyle: {
+          fontWeight: '700',
+        },
       }}>
-      <Tabs.Screen
-        name="workouts"
-        options={{
-          title: 'Workouts',
-          tabBarIcon: () => <TabIcon name="workouts" />,
-        }}
-      />
-      <Tabs.Screen
-        name="meals"
-        options={{
-          title: 'Meals',
-          tabBarIcon: () => <TabIcon name="meals" />,
-        }}
-      />
-      <Tabs.Screen
-        name="dashboard"
-        options={{
-          title: 'Dashboard',
-          tabBarIcon: () => <TabIcon name="dashboard" />,
-        }}
-      />
+      <Tabs.Screen name="workouts" options={{ title: 'Exercise' }} />
+      <Tabs.Screen name="meals" options={{ title: 'Food' }} />
+      <Tabs.Screen name="dashboard" options={{ title: 'Dashboard' }} />
     </Tabs>
   );
 }

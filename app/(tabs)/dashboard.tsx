@@ -8,8 +8,6 @@ import { exportAllData, formatDate, getLast7DayStats } from '@/src/db';
 import type { DayStats } from '@/src/db';
 import type { ThemeColors } from '@/src/theme';
 
-const PROTEIN_TARGET = 150;
-
 function StatRow({
   label,
   value,
@@ -36,41 +34,14 @@ function StatRow({
   );
 }
 
-function DayCard({ day, c }: { day: DayStats; c: ThemeColors }) {
-  const barWidth = `${Math.round(Math.min(100, (day.proteinG / PROTEIN_TARGET) * 100))}%` as const;
-  const activity = [
-    day.workouts > 0 ? `${day.workouts} workout${day.workouts === 1 ? '' : 's'}` : null,
-    day.liftVolumeKg > 0 ? `${day.liftVolumeKg.toLocaleString()} kg lifted` : null,
-    day.swimDistanceM > 0 ? `${day.swimDistanceM.toLocaleString()} m swum` : null,
-  ].filter((x): x is string => x !== null);
-
-  return (
-    <View style={{ marginBottom: 12 }}>
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
-        <Text style={{ color: c.text, fontSize: 14, fontWeight: '600' }}>{formatDate(day.date)}</Text>
-        <Muted>
-          {day.proteinG} / {PROTEIN_TARGET} g
-        </Muted>
-      </View>
-      <View
-        style={{
-          height: 10,
-          borderRadius: 5,
-          backgroundColor: c.border,
-          overflow: 'hidden',
-        }}>
-        <View
-          style={{
-            height: '100%',
-            width: barWidth,
-            backgroundColor: day.proteinG >= PROTEIN_TARGET ? c.accent : '#f59e0b',
-            borderRadius: 5,
-          }}
-        />
-      </View>
-      {activity.length > 0 && <Muted>{activity.join(' · ')}</Muted>}
-    </View>
-  );
+function daySummary(day: DayStats): string {
+  const parts: string[] = [];
+  if (day.exercises > 0) parts.push(`${day.exercises} exercise${day.exercises === 1 ? '' : 's'}`);
+  if (day.volumeKg > 0) parts.push(`${day.volumeKg.toLocaleString()} kg lifted`);
+  if (day.distanceM > 0) parts.push(`${day.distanceM.toLocaleString()} m`);
+  if (day.durationMin > 0) parts.push(`${day.durationMin} min`);
+  if (day.foods > 0) parts.push(`${day.foods} food${day.foods === 1 ? '' : 's'}`);
+  return parts.length > 0 ? parts.join('  ·  ') : 'Rest day';
 }
 
 export default function DashboardScreen() {
@@ -92,12 +63,11 @@ export default function DashboardScreen() {
     }, [db]),
   );
 
-  const totalWorkouts = stats.reduce((a, s) => a + s.workouts, 0);
-  const totalVolume = stats.reduce((a, s) => a + s.liftVolumeKg, 0);
-  const totalSwim = stats.reduce((a, s) => a + s.swimDistanceM, 0);
-  const avgProtein = stats.length
-    ? Math.round(stats.reduce((a, s) => a + s.proteinG, 0) / stats.length)
-    : 0;
+  const totalExercises = stats.reduce((a, s) => a + s.exercises, 0);
+  const totalVolume = stats.reduce((a, s) => a + s.volumeKg, 0);
+  const totalDistance = stats.reduce((a, s) => a + s.distanceM, 0);
+  const totalDuration = stats.reduce((a, s) => a + s.durationMin, 0);
+  const totalFoods = stats.reduce((a, s) => a + s.foods, 0);
 
   async function onExport() {
     if (sharing) return;
@@ -121,17 +91,23 @@ export default function DashboardScreen() {
         <Title>Dashboard</Title>
         <Card>
           <Text style={{ color: c.text, fontSize: 16, fontWeight: '700', marginBottom: 6 }}>Last 7 days</Text>
-          <StatRow label="Workouts" value={String(totalWorkouts)} c={c} />
-          <StatRow label="Lift volume" value={`${totalVolume.toLocaleString()} kg`} c={c} />
-          <StatRow label="Swim distance" value={`${totalSwim.toLocaleString()} m`} c={c} />
-          <StatRow label="Avg protein" value={`${avgProtein} g/day`} last c={c} />
+          <StatRow label="Exercises logged" value={String(totalExercises)} c={c} />
+          <StatRow label="Volume lifted" value={`${totalVolume.toLocaleString()} kg`} c={c} />
+          <StatRow label="Distance" value={`${totalDistance.toLocaleString()} m`} c={c} />
+          <StatRow label="Active time" value={`${totalDuration.toLocaleString()} min`} c={c} />
+          <StatRow label="Foods logged" value={String(totalFoods)} last c={c} />
         </Card>
         <Card>
           <Text style={{ color: c.text, fontSize: 16, fontWeight: '700', marginBottom: 10 }}>
-            Protein vs {PROTEIN_TARGET} g target
+            Daily activity
           </Text>
           {stats.map((day) => (
-            <DayCard key={day.date} day={day} c={c} />
+            <View key={day.date} style={{ marginBottom: 12 }}>
+              <Text style={{ color: c.text, fontSize: 14, fontWeight: '600', marginBottom: 2 }}>
+                {formatDate(day.date)}
+              </Text>
+              <Muted>{daySummary(day)}</Muted>
+            </View>
           ))}
         </Card>
         <PrimaryButton title={sharing ? 'Preparing…' : 'Export all data (JSON)'} onPress={onExport} disabled={sharing} />

@@ -1,75 +1,61 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
-export type WorkoutKind = 'lift' | 'swim';
-export type MealSlot = 'breakfast' | 'lunch' | 'dinner' | 'snack';
+export type WeightUnit = 'kg' | 'lb';
 
-export interface Workout {
+export interface ExerciseLog {
   id: number;
   date: string; // YYYY-MM-DD in local time
-  kind: WorkoutKind;
-  name: string;
-}
-
-export interface WorkoutSet {
-  id: number;
-  workout_id: number;
   exercise: string;
-  set_no: number;
+  sets: number | null;
   reps: number | null;
-  weight_kg: number | null;
-  distance_m: number | null;
+  weight: number | null;
+  weight_unit: WeightUnit | null;
   duration_min: number | null;
+  distance_m: number | null;
 }
 
-export interface Meal {
+export interface FoodLog {
   id: number;
   date: string; // YYYY-MM-DD in local time
-  slot: MealSlot;
   name: string;
-  description: string | null;
-  protein_g: number | null;
-  notes: string | null;
+  grams: number | null;
 }
 
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
-/** Creates the schema on first run. Passed as `onInit` to SQLiteProvider. */
+/** Creates / migrates the schema. Passed as `onInit` to SQLiteProvider. */
 export async function migrateDbIfNeeded(db: SQLiteDatabase): Promise<void> {
   const row = await db.getFirstAsync<{ user_version: number }>('PRAGMA user_version');
   const current = row?.user_version ?? 0;
   if (current >= DB_VERSION) return;
 
-  if (current === 0) {
+  if (current < 2) {
+    // v2 replaces the v1 template-based schema (workouts/sets/meals) with
+    // free-form per-exercise and per-food logs.
     await db.execAsync(`
       PRAGMA journal_mode = WAL;
-      CREATE TABLE IF NOT EXISTS workouts (
+      DROP TABLE IF EXISTS sets;
+      DROP TABLE IF EXISTS workouts;
+      DROP TABLE IF EXISTS meals;
+      CREATE TABLE IF NOT EXISTS exercise_logs (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         date TEXT NOT NULL,
-        kind TEXT NOT NULL,
-        name TEXT NOT NULL
-      );
-      CREATE TABLE IF NOT EXISTS sets (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        workout_id INTEGER NOT NULL REFERENCES workouts(id),
         exercise TEXT NOT NULL,
-        set_no INTEGER NOT NULL,
+        sets INTEGER,
         reps INTEGER,
-        weight_kg REAL,
-        distance_m REAL,
-        duration_min REAL
+        weight REAL,
+        weight_unit TEXT,
+        duration_min REAL,
+        distance_m REAL
       );
-      CREATE TABLE IF NOT EXISTS meals (
+      CREATE TABLE IF NOT EXISTS food_logs (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         date TEXT NOT NULL,
-        slot TEXT NOT NULL,
         name TEXT NOT NULL,
-        description TEXT,
-        protein_g REAL,
-        notes TEXT
+        grams REAL
       );
-      CREATE INDEX IF NOT EXISTS idx_workouts_date ON workouts(date);
-      CREATE INDEX IF NOT EXISTS idx_sets_workout ON sets(workout_id);
-      CREATE INDEX IF NOT EXISTS idx_meals_date ON meals(date);
+      CREATE INDEX IF NOT EXISTS idx_exercise_logs_date ON exercise_logs(date);
+      CREATE INDEX IF NOT EXISTS idx_food_logs_date ON food_logs(date);
     `);
   }
 
@@ -93,7 +79,14 @@ export function daysAgoLocal(n: number): string {
   return toLocalDateString(d);
 }
 
-/** "2026-09-21" -> "Mon, Sep 21" */
+export function addDaysLocal(yyyyMmDd: string, n: number): string {
+  const [y, m, d] = yyyyMmDd.split('-').map(Number);
+  const dt = new Date(y ?? 1970, (m ?? 1) - 1, d ?? 1);
+  dt.setDate(dt.getDate() + n);
+  return toLocalDateString(dt);
+}
+
+/** "2026-09-22" -> "Tue, Sep 22" */
 export function formatDate(yyyyMmDd: string): string {
   const [y, m, d] = yyyyMmDd.split('-').map(Number);
   return new Date(y ?? 1970, (m ?? 1) - 1, d ?? 1).toLocaleDateString(undefined, {
@@ -103,148 +96,124 @@ export function formatDate(yyyyMmDd: string): string {
   });
 }
 
-export async function insertWorkout(
+export async function insertExerciseLog(
   db: SQLiteDatabase,
-  w: { date: string; kind: WorkoutKind; name: string },
+  e: Omit<ExerciseLog, 'id'>,
 ): Promise<number> {
-  const res = await db.runAsync('INSERT INTO workouts (date, kind, name) VALUES (?, ?, ?)', w.date, w.kind, w.name);
+  const res = await db.runAsync(
+    `INSERT INTO exercise_logs
+       (date, exercise, sets, reps, weight, weight_unit, duration_min, distance_m)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    e.date,
+    e.exercise,
+    e.sets,
+    e.reps,
+    e.weight,
+    e.weight_unit,
+    e.duration_min,
+    e.distance_m,
+  );
   return res.lastInsertRowId;
 }
 
-export async function insertSet(
-  db: SQLiteDatabase,
-  s: {
-    workout_id: number;
-    exercise: string;
-    set_no: number;
-    reps: number | null;
-    weight_kg: number | null;
-    distance_m: number | null;
-    duration_min: number | null;
-  },
-): Promise<void> {
-  await db.runAsync(
-    'INSERT INTO sets (workout_id, exercise, set_no, reps, weight_kg, distance_m, duration_min) VALUES (?, ?, ?, ?, ?, ?, ?)',
-    s.workout_id,
-    s.exercise,
-    s.set_no,
-    s.reps,
-    s.weight_kg,
-    s.distance_m,
-    s.duration_min,
-  );
+export async function insertFoodLog(db: SQLiteDatabase, f: Omit<FoodLog, 'id'>): Promise<number> {
+  const res = await db.runAsync('INSERT INTO food_logs (date, name, grams) VALUES (?, ?, ?)', f.date, f.name, f.grams);
+  return res.lastInsertRowId;
 }
 
-export async function getWorkouts(db: SQLiteDatabase, limit = 100): Promise<Workout[]> {
-  return db.getAllAsync<Workout>(
-    'SELECT id, date, kind, name FROM workouts ORDER BY date DESC, id DESC LIMIT ?',
+export async function getExerciseLogs(db: SQLiteDatabase, limit = 500): Promise<ExerciseLog[]> {
+  return db.getAllAsync<ExerciseLog>(
+    `SELECT id, date, exercise, sets, reps, weight, weight_unit, duration_min, distance_m
+     FROM exercise_logs ORDER BY date DESC, id DESC LIMIT ?`,
     limit,
   );
 }
 
-export async function getSetsForWorkout(db: SQLiteDatabase, workoutId: number): Promise<WorkoutSet[]> {
-  return db.getAllAsync<WorkoutSet>(
-    'SELECT id, workout_id, exercise, set_no, reps, weight_kg, distance_m, duration_min FROM sets WHERE workout_id = ? ORDER BY set_no ASC, id ASC',
-    workoutId,
+export async function getFoodLogs(db: SQLiteDatabase, limit = 500): Promise<FoodLog[]> {
+  return db.getAllAsync<FoodLog>(
+    'SELECT id, date, name, grams FROM food_logs ORDER BY date DESC, id DESC LIMIT ?',
+    limit,
   );
 }
 
-export async function insertMeal(db: SQLiteDatabase, m: Omit<Meal, 'id'>): Promise<number> {
-  const res = await db.runAsync(
-    'INSERT INTO meals (date, slot, name, description, protein_g, notes) VALUES (?, ?, ?, ?, ?, ?)',
-    m.date,
-    m.slot,
-    m.name,
-    m.description,
-    m.protein_g,
-    m.notes,
+/** Most recently used unique exercise names, for quick-add chips. */
+export async function getRecentExerciseNames(db: SQLiteDatabase, limit = 8): Promise<string[]> {
+  const rows = await db.getAllAsync<{ exercise: string }>(
+    'SELECT exercise FROM exercise_logs GROUP BY exercise ORDER BY MAX(id) DESC LIMIT ?',
+    limit,
   );
-  return res.lastInsertRowId;
+  return rows.map((r) => r.exercise);
 }
 
-export async function getMealsForDate(db: SQLiteDatabase, date: string): Promise<Meal[]> {
-  return db.getAllAsync<Meal>(
-    'SELECT id, date, slot, name, description, protein_g, notes FROM meals WHERE date = ? ORDER BY id ASC',
-    date,
+/** Most recently used unique food names, for quick-add chips. */
+export async function getRecentFoodNames(db: SQLiteDatabase, limit = 8): Promise<string[]> {
+  const rows = await db.getAllAsync<{ name: string }>(
+    'SELECT name FROM food_logs GROUP BY name ORDER BY MAX(id) DESC LIMIT ?',
+    limit,
   );
+  return rows.map((r) => r.name);
 }
 
 export interface DayStats {
   date: string;
-  workouts: number;
-  liftVolumeKg: number;
-  swimDistanceM: number;
-  proteinG: number;
+  exercises: number;
+  volumeKg: number;
+  distanceM: number;
+  durationMin: number;
+  foods: number;
 }
+
+const LB_TO_KG = 0.45359237;
 
 export async function getLast7DayStats(db: SQLiteDatabase): Promise<DayStats[]> {
   const since = daysAgoLocal(6);
   const dates: string[] = [];
   for (let i = 6; i >= 0; i--) dates.push(daysAgoLocal(i));
 
-  const workoutCounts = await db.getAllAsync<{ date: string; n: number }>(
-    'SELECT date, COUNT(*) AS n FROM workouts WHERE date >= ? GROUP BY date',
+  const exRows = await db.getAllAsync<{ date: string; n: number; vol: number; dist: number; dur: number }>(
+    `SELECT date,
+       COUNT(*) AS n,
+       SUM(COALESCE(sets, 1) * COALESCE(reps, 0) * COALESCE(weight, 0) *
+           CASE WHEN weight_unit = 'lb' THEN ${LB_TO_KG} ELSE 1 END) AS vol,
+       SUM(COALESCE(distance_m, 0)) AS dist,
+       SUM(COALESCE(duration_min, 0)) AS dur
+     FROM exercise_logs WHERE date >= ? GROUP BY date`,
     since,
   );
-  const volumes = await db.getAllAsync<{ date: string; v: number }>(
-    `SELECT w.date AS date, SUM(s.reps * s.weight_kg) AS v
-     FROM sets s JOIN workouts w ON w.id = s.workout_id
-     WHERE w.date >= ? AND w.kind = 'lift' AND s.reps IS NOT NULL AND s.weight_kg IS NOT NULL
-     GROUP BY w.date`,
-    since,
-  );
-  const swimDistances = await db.getAllAsync<{ date: string; d: number }>(
-    `SELECT w.date AS date, SUM(s.distance_m) AS d
-     FROM sets s JOIN workouts w ON w.id = s.workout_id
-     WHERE w.date >= ? AND w.kind = 'swim' AND s.distance_m IS NOT NULL
-     GROUP BY w.date`,
-    since,
-  );
-  const proteins = await db.getAllAsync<{ date: string; p: number }>(
-    'SELECT date, SUM(protein_g) AS p FROM meals WHERE date >= ? GROUP BY date',
+  const foodRows = await db.getAllAsync<{ date: string; n: number }>(
+    'SELECT date, COUNT(*) AS n FROM food_logs WHERE date >= ? GROUP BY date',
     since,
   );
 
-  function rowsToMap<T extends { date: string }>(rows: T[], pick: (r: T) => number): Map<string, number> {
-    const m = new Map<string, number>();
-    for (const r of rows) m.set(r.date, pick(r) ?? 0);
-    return m;
-  }
-  const workoutMap = rowsToMap(workoutCounts, (r) => r.n);
-  const volumeMap = rowsToMap(volumes, (r) => r.v);
-  const swimMap = rowsToMap(swimDistances, (r) => r.d);
-  const proteinMap = rowsToMap(proteins, (r) => r.p);
+  const exMap = new Map(exRows.map((r) => [r.date, r]));
+  const foodMap = new Map(foodRows.map((r) => [r.date, r.n]));
 
-  return dates.map((date) => ({
-    date,
-    workouts: workoutMap.get(date) ?? 0,
-    liftVolumeKg: Math.round(volumeMap.get(date) ?? 0),
-    swimDistanceM: Math.round(swimMap.get(date) ?? 0),
-    proteinG: Math.round((proteinMap.get(date) ?? 0) * 10) / 10,
-  }));
+  return dates.map((date) => {
+    const e = exMap.get(date);
+    return {
+      date,
+      exercises: e?.n ?? 0,
+      volumeKg: Math.round(e?.vol ?? 0),
+      distanceM: Math.round(e?.dist ?? 0),
+      durationMin: Math.round(e?.dur ?? 0),
+      foods: foodMap.get(date) ?? 0,
+    };
+  });
 }
 
 export async function exportAllData(db: SQLiteDatabase): Promise<object> {
-  const workouts = await db.getAllAsync<Workout>(
-    'SELECT id, date, kind, name FROM workouts ORDER BY date ASC, id ASC',
+  const exercise_logs = await db.getAllAsync<ExerciseLog>(
+    `SELECT id, date, exercise, sets, reps, weight, weight_unit, duration_min, distance_m
+     FROM exercise_logs ORDER BY date ASC, id ASC`,
   );
-  const sets = await db.getAllAsync<WorkoutSet>(
-    'SELECT id, workout_id, exercise, set_no, reps, weight_kg, distance_m, duration_min FROM sets ORDER BY workout_id ASC, set_no ASC',
+  const food_logs = await db.getAllAsync<FoodLog>(
+    'SELECT id, date, name, grams FROM food_logs ORDER BY date ASC, id ASC',
   );
-  const meals = await db.getAllAsync<Meal>(
-    'SELECT id, date, slot, name, description, protein_g, notes FROM meals ORDER BY date ASC, id ASC',
-  );
-  const setsByWorkout = new Map<number, WorkoutSet[]>();
-  for (const s of sets) {
-    const arr = setsByWorkout.get(s.workout_id) ?? [];
-    arr.push(s);
-    setsByWorkout.set(s.workout_id, arr);
-  }
   return {
     app: 'longevity-log',
-    version: 1,
+    version: 2,
     exported_at: new Date().toISOString(),
-    workouts: workouts.map((w) => ({ ...w, sets: setsByWorkout.get(w.id) ?? [] })),
-    meals,
+    exercise_logs,
+    food_logs,
   };
 }

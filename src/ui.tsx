@@ -8,13 +8,13 @@ import {
 } from 'react-native';
 import type { TextInputProps, ViewStyle } from 'react-native';
 
-import { useColorScheme } from '@/components/useColorScheme';
 import { palette } from './theme';
 import type { ThemeColors } from './theme';
+import { addDaysLocal, formatDate, todayLocal } from './db';
 
+/** The app is dark-mode only. */
 export function useThemeColors(): ThemeColors {
-  const scheme = useColorScheme();
-  return palette[scheme === 'dark' ? 'dark' : 'light'];
+  return palette.dark;
 }
 
 export function Screen({ children, style }: { children: ReactNode; style?: ViewStyle }) {
@@ -135,6 +135,49 @@ export function Field({ label, value, onChangeText, ...rest }: FieldProps) {
         }}
         {...rest}
       />
+    </View>
+  );
+}
+
+/** Date picker as a simple day stepper. Defaults to today. */
+export function DateField({ value, onChange }: { value: string; onChange: (d: string) => void }) {
+  const c = useThemeColors();
+  const isToday = value === todayLocal();
+  const arrow = {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: c.border,
+    backgroundColor: c.card,
+  } as const;
+  return (
+    <View style={{ marginBottom: 10 }}>
+      <Text style={{ color: c.sub, fontSize: 13, fontWeight: '600', marginBottom: 4 }}>Date</Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+        <Pressable onPress={() => onChange(addDaysLocal(value, -1))} style={arrow} hitSlop={8}>
+          <Text style={{ color: c.text, fontSize: 18, fontWeight: '700' }}>‹</Text>
+        </Pressable>
+        <Text
+          style={{
+            flex: 1,
+            textAlign: 'center',
+            color: c.text,
+            fontSize: 16,
+            fontWeight: '600',
+          }}>
+          {formatDate(value)}
+          {isToday ? ' · Today' : ''}
+        </Text>
+        <Pressable onPress={() => onChange(addDaysLocal(value, 1))} style={arrow} hitSlop={8}>
+          <Text style={{ color: c.text, fontSize: 18, fontWeight: '700' }}>›</Text>
+        </Pressable>
+      </View>
+      {!isToday && (
+        <Pressable onPress={() => onChange(todayLocal())} hitSlop={8} style={{ marginTop: 6, alignSelf: 'flex-start' }}>
+          <Text style={{ color: c.accent, fontSize: 14, fontWeight: '600' }}>Back to today</Text>
+        </Pressable>
+      )}
     </View>
   );
 }

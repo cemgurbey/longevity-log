@@ -1,31 +1,23 @@
-import { useCallback, useState } from 'react';
-import { FlatList, Text, View } from 'react-native';
+import { useCallback, useMemo, useState } from 'react';
+import { ScrollView, Text, View } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 
 import { Card, EmptyState, Muted, PrimaryButton, Screen, Title, useThemeColors } from '@/src/ui';
-import { getMealsForDate, todayLocal } from '@/src/db';
-import type { Meal, MealSlot } from '@/src/db';
-
-const SLOT_ORDER: MealSlot[] = ['breakfast', 'lunch', 'dinner', 'snack'];
-const SLOT_LABELS: Record<MealSlot, string> = {
-  breakfast: 'Breakfast',
-  lunch: 'Lunch',
-  dinner: 'Dinner',
-  snack: 'Snack',
-};
+import { formatDate, getFoodLogs } from '@/src/db';
+import type { FoodLog } from '@/src/db';
 
 export default function MealsScreen() {
   const db = useSQLiteContext();
   const c = useThemeColors();
-  const [meals, setMeals] = useState<Meal[]>([]);
+  const [logs, setLogs] = useState<FoodLog[]>([]);
 
   useFocusEffect(
     useCallback(() => {
       let alive = true;
       (async () => {
-        const ms = await getMealsForDate(db, todayLocal());
-        if (alive) setMeals(ms);
+        const rows = await getFoodLogs(db);
+        if (alive) setLogs(rows);
       })();
       return () => {
         alive = false;
@@ -33,58 +25,47 @@ export default function MealsScreen() {
     }, [db]),
   );
 
-  const total = meals.reduce((a, m) => a + (m.protein_g ?? 0), 0);
-  const bySlot = SLOT_ORDER.map((slot) => ({
-    slot,
-    items: meals.filter((m) => m.slot === slot),
-  })).filter((g) => g.items.length > 0);
+  const groups = useMemo(() => {
+    const map = new Map<string, FoodLog[]>();
+    for (const l of logs) {
+      const arr = map.get(l.date) ?? [];
+      arr.push(l);
+      map.set(l.date, arr);
+    }
+    return [...map.entries()];
+  }, [logs]);
 
   return (
     <Screen>
-      <FlatList
-        data={bySlot}
-        keyExtractor={(g) => g.slot}
-        showsVerticalScrollIndicator={false}
-        ListHeaderComponent={
-          <>
-            <Title>Today&apos;s meals</Title>
-            <Card>
-              <Text style={{ color: c.text, fontSize: 28, fontWeight: '800' }}>
-                {Math.round(total * 10) / 10} g
-              </Text>
-              <Muted>protein today · target 150 g</Muted>
-            </Card>
-            <PrimaryButton title="+ Log meal" onPress={() => router.push('/log-meal')} />
-            <View style={{ height: 12 }} />
-          </>
-        }
-        ListEmptyComponent={<EmptyState message="Nothing logged today yet." />}
-        renderItem={({ item }) => (
-          <Card>
-            <Text
-              style={{
-                color: c.sub,
-                fontSize: 13,
-                fontWeight: '700',
-                textTransform: 'uppercase',
-                marginBottom: 6,
-              }}>
-              {SLOT_LABELS[item.slot]}
+      <ScrollView showsVerticalScrollIndicator={false}>
+        <Title>Food</Title>
+        <PrimaryButton title="Log food" onPress={() => router.push('/log-meal')} />
+        <View style={{ height: 12 }} />
+        {groups.length === 0 && <EmptyState message="No foods logged yet." />}
+        {groups.map(([date, entries]) => (
+          <Card key={date}>
+            <Text style={{ color: c.text, fontSize: 15, fontWeight: '700', marginBottom: 8 }}>
+              {formatDate(date)}
             </Text>
-            {item.items.map((m) => (
-              <View key={m.id} style={{ paddingVertical: 6 }}>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                  <Text style={{ color: c.text, fontSize: 15, fontWeight: '600', flex: 1 }}>{m.name}</Text>
-                  <Text style={{ color: c.accent, fontSize: 15, fontWeight: '700' }}>
-                    {m.protein_g != null ? `${m.protein_g} g` : ''}
-                  </Text>
-                </View>
-                {!!m.description && <Muted>{m.description}</Muted>}
+            {entries.map((f) => (
+              <View
+                key={f.id}
+                style={{
+                  flexDirection: 'row',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  paddingVertical: 7,
+                  borderTopWidth: 1,
+                  borderTopColor: c.border,
+                }}>
+                <Text style={{ color: c.text, fontSize: 15, fontWeight: '600', flex: 1 }}>{f.name}</Text>
+                <Muted>{f.grams != null ? `${f.grams} g` : ''}</Muted>
               </View>
             ))}
           </Card>
-        )}
-      />
+        ))}
+        <View style={{ height: 24 }} />
+      </ScrollView>
     </Screen>
   );
 }
