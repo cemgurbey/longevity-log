@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { useState } from 'react';
 import {
+  InputAccessoryView,
   Keyboard,
   KeyboardAvoidingView,
   Modal,
@@ -38,7 +39,37 @@ export function FormScreen({ children, style }: { children: ReactNode; style?: V
         style={{ flex: 1 }}>
         {children}
       </KeyboardAvoidingView>
+      <DoneBar />
     </Screen>
+  );
+}
+
+const DONE_BAR_ID = 'doneBar';
+
+/**
+ * Floating "Done" button just above the iOS keyboard, banking-app style: a
+ * filled squircle that dismisses the keyboard. This is what makes the keyboard
+ * dismissable on number pads, which have no return key of their own.
+ */
+function DoneBar() {
+  const c = useThemeColors();
+  if (Platform.OS !== 'ios') return null;
+  return (
+    <InputAccessoryView nativeID={DONE_BAR_ID}>
+      <View style={{ alignItems: 'flex-end', paddingRight: 16, paddingBottom: 10 }}>
+        <Pressable
+          onPress={() => Keyboard.dismiss()}
+          style={({ pressed }) => ({
+            backgroundColor: c.accent,
+            borderRadius: 14,
+            paddingHorizontal: 24,
+            paddingVertical: 11,
+            opacity: pressed ? 0.8 : 1,
+          })}>
+          <Text style={{ color: c.accentText, fontSize: 16, fontWeight: '700' }}>Done</Text>
+        </Pressable>
+      </View>
+    </InputAccessoryView>
   );
 }
 
@@ -172,6 +203,7 @@ export function Field({ label, value, onChangeText, ...rest }: FieldProps) {
           color: c.text,
         }}
         {...rest}
+        inputAccessoryViewID={Platform.OS === 'ios' ? DONE_BAR_ID : undefined}
       />
     </View>
   );
