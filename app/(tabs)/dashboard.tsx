@@ -53,15 +53,23 @@ function shortDate(yyyyMmDd: string): string {
   });
 }
 
-/** Seven ISO dates ending today, shifted back `offset` weeks, today first. */
+/**
+ * ISO dates of the Monday–Sunday week containing today, shifted back `offset`
+ * weeks, newest first. The current week only includes days up to today.
+ */
 function weekDates(offset: number): string[] {
-  const dates: string[] = [];
   const today = new Date();
-  for (let i = 0; i < 7; i++) {
+  const daysSinceMonday = (today.getDay() + 6) % 7;
+  const monday = new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate() - daysSinceMonday - offset * 7,
+  );
+  const count = offset === 0 ? daysSinceMonday + 1 : 7;
+  const dates: string[] = [];
+  for (let i = count - 1; i >= 0; i--) {
     dates.push(
-      toLocalDateString(
-        new Date(today.getFullYear(), today.getMonth(), today.getDate() - offset * 7 - i),
-      ),
+      toLocalDateString(new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + i)),
     );
   }
   return dates;
