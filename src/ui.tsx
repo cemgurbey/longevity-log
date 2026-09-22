@@ -1,6 +1,9 @@
 import type { ReactNode } from 'react';
 import { useState } from 'react';
 import {
+  InputAccessoryView,
+  Keyboard,
+  KeyboardAvoidingView,
   Modal,
   Platform,
   Pressable,
@@ -24,6 +27,48 @@ export function useThemeColors(): ThemeColors {
 export function Screen({ children, style }: { children: ReactNode; style?: ViewStyle }) {
   const c = useThemeColors();
   return <View style={[{ flex: 1, backgroundColor: c.bg, padding: 16 }, style]}>{children}</View>;
+}
+
+/** Screen variant for forms: shifts content up so the focused field and buttons stay visible above the keyboard. */
+export function FormScreen({ children, style }: { children: ReactNode; style?: ViewStyle }) {
+  return (
+    <Screen style={style}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={{ flex: 1 }}>
+        {children}
+      </KeyboardAvoidingView>
+    </Screen>
+  );
+}
+
+const DONE_ACCESSORY_ID = 'longevity-done-accessory';
+
+/**
+ * iOS toolbar above the keyboard with a Done button. Number pads have no
+ * return key, so this is the way to dismiss the keyboard.
+ * Render once per screen that contains text inputs.
+ */
+export function KeyboardDoneBar() {
+  const c = useThemeColors();
+  if (Platform.OS !== 'ios') return null;
+  return (
+    <InputAccessoryView nativeID={DONE_ACCESSORY_ID}>
+      <View
+        style={{
+          backgroundColor: c.card,
+          borderTopWidth: StyleSheet.hairlineWidth,
+          borderTopColor: c.border,
+          paddingHorizontal: 8,
+          paddingVertical: 4,
+          alignItems: 'flex-end',
+        }}>
+        <Pressable onPress={() => Keyboard.dismiss()} hitSlop={12}>
+          <Text style={{ color: c.accent, fontSize: 16, fontWeight: '700', padding: 8 }}>Done</Text>
+        </Pressable>
+      </View>
+    </InputAccessoryView>
+  );
 }
 
 export function Card({ children, style }: { children: ReactNode; style?: ViewStyle }) {
@@ -127,6 +172,7 @@ export function Field({ label, value, onChangeText, ...rest }: FieldProps) {
         value={value}
         onChangeText={onChangeText}
         placeholderTextColor={c.sub}
+        inputAccessoryViewID={Platform.OS === 'ios' ? DONE_ACCESSORY_ID : undefined}
         style={{
           backgroundColor: c.card,
           borderColor: c.border,

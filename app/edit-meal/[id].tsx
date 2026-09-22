@@ -3,7 +3,7 @@ import { Alert, ScrollView, View } from 'react-native';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 
-import { DangerButton, EmptyState, Muted, PrimaryButton, Screen } from '@/src/ui';
+import { DangerButton, EmptyState, FormScreen, KeyboardDoneBar, Muted, PrimaryButton } from '@/src/ui';
 import { deleteFoodLog, getFoodLogById, updateFoodLog } from '@/src/db';
 import { FoodFormFields, foodToFormValue, parseFoodForm } from '@/src/food-form';
 import type { FoodFormValue } from '@/src/food-form';
@@ -63,7 +63,8 @@ export default function EditMealScreen() {
   }
 
   return (
-    <Screen>
+    <FormScreen>
+      <KeyboardDoneBar />
       <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         {!loaded ? (
           <Muted>Loading…</Muted>
@@ -82,6 +83,6 @@ export default function EditMealScreen() {
           </View>
         )}
       </ScrollView>
-    </Screen>
+    </FormScreen>
   );
 }

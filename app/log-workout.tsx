@@ -3,7 +3,7 @@ import { Alert, ScrollView, Text, View } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 
-import { Chip, PrimaryButton, Screen, useThemeColors } from '@/src/ui';
+import { Chip, FormScreen, KeyboardDoneBar, PrimaryButton, useThemeColors } from '@/src/ui';
 import { getRecentExerciseLogs, insertExerciseLog } from '@/src/db';
 import type { ExerciseLog } from '@/src/db';
 import { ExerciseFormFields, emptyExerciseForm, parseExerciseForm } from '@/src/exercise-form';
@@ -61,7 +61,8 @@ export default function LogWorkoutScreen() {
   }
 
   return (
-    <Screen>
+    <FormScreen>
+      <KeyboardDoneBar />
       <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         {recent.length > 0 && (
           <View style={{ marginBottom: 10 }}>
@@ -88,6 +89,6 @@ export default function LogWorkoutScreen() {
         <PrimaryButton title={saving ? 'Saving…' : 'Save exercise'} onPress={save} disabled={saving} />
         <View style={{ height: 32 }} />
       </ScrollView>
-    </Screen>
+    </FormScreen>
   );
 }
