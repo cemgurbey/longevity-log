@@ -89,6 +89,8 @@ export default function DashboardScreen() {
     <Screen>
       <ScrollView showsVerticalScrollIndicator={false}>
         <Title>Dashboard</Title>
+        <PrimaryButton title={sharing ? 'Preparing…' : 'Export all data (JSON)'} onPress={onExport} disabled={sharing} />
+        <View style={{ height: 12 }} />
         <Card>
           <Text style={{ color: c.text, fontSize: 16, fontWeight: '700', marginBottom: 6 }}>Last 7 days</Text>
           <StatRow label="Exercises logged" value={String(totalExercises)} c={c} />
@@ -110,7 +112,6 @@ export default function DashboardScreen() {
             </View>
           ))}
         </Card>
-        <PrimaryButton title={sharing ? 'Preparing…' : 'Export all data (JSON)'} onPress={onExport} disabled={sharing} />
         <View style={{ height: 24 }} />
       </ScrollView>
     </Screen>

@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react';
 import { useState } from 'react';
 import {
+  Modal,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -146,15 +148,25 @@ function parseLocalDate(yyyyMmDd: string): Date {
   return new Date(y ?? 1970, (m ?? 1) - 1, d ?? 1);
 }
 
-/** Date picker: tap the field to open the native calendar. */
+/**
+ * Date picker. Tapping the field opens the calendar directly:
+ * a bottom sheet with an inline calendar on iOS, the native dialog on Android.
+ */
 export function DateField({ value, onChange }: { value: string; onChange: (d: string) => void }) {
   const c = useThemeColors();
   const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState<Date>(() => parseLocalDate(value));
+
+  function openPicker() {
+    setDraft(parseLocalDate(value));
+    setOpen(true);
+  }
+
   return (
     <View style={{ marginBottom: 10 }}>
       <Text style={{ color: c.sub, fontSize: 13, fontWeight: '600', marginBottom: 4 }}>Date</Text>
       <Pressable
-        onPress={() => setOpen(true)}
+        onPress={openPicker}
         style={({ pressed }) => ({
           backgroundColor: c.card,
           borderColor: c.border,
@@ -166,19 +178,69 @@ export function DateField({ value, onChange }: { value: string; onChange: (d: st
         })}>
         <Text style={{ color: c.text, fontSize: 16, fontWeight: '600' }}>{formatDate(value)}</Text>
       </Pressable>
-      {open && (
-        <DateTimePicker
-          value={parseLocalDate(value)}
-          mode="date"
-          display="default"
-          onChange={(event, selected) => {
-            setOpen(false);
-            if (event.type === 'set' && selected) {
-              onChange(toLocalDateString(selected));
-            }
-          }}
-        />
-      )}
+
+      {Platform.OS === 'android'
+        ? open && (
+            <DateTimePicker
+              value={draft}
+              mode="date"
+              display="default"
+              onChange={(event, selected) => {
+                setOpen(false);
+                if (event.type === 'set' && selected) {
+                  onChange(toLocalDateString(selected));
+                }
+              }}
+            />
+          )
+        : (
+          <Modal
+            visible={open}
+            transparent
+            animationType="slide"
+            onRequestClose={() => setOpen(false)}>
+            <Pressable
+              onPress={() => setOpen(false)}
+              style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}>
+              <View
+                style={{
+                  backgroundColor: c.card,
+                  borderTopLeftRadius: 16,
+                  borderTopRightRadius: 16,
+                  padding: 16,
+                  paddingBottom: 32,
+                }}>
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    marginBottom: 8,
+                  }}>
+                  <Pressable onPress={() => setOpen(false)} hitSlop={10}>
+                    <Text style={{ color: c.sub, fontSize: 16 }}>Cancel</Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={() => {
+                      onChange(toLocalDateString(draft));
+                      setOpen(false);
+                    }}
+                    hitSlop={10}>
+                    <Text style={{ color: c.accent, fontSize: 16, fontWeight: '700' }}>Done</Text>
+                  </Pressable>
+                </View>
+                <DateTimePicker
+                  value={draft}
+                  mode="date"
+                  display="inline"
+                  onChange={(_event, selected) => {
+                    if (selected) setDraft(selected);
+                  }}
+                />
+              </View>
+            </Pressable>
+          </Modal>
+        )}
     </View>
   );
 }
