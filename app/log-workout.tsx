@@ -3,7 +3,7 @@ import { Alert, ScrollView, Text, View } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 
-import { Chip, DateField, Field, Muted, PrimaryButton, Screen, useThemeColors } from '@/src/ui';
+import { Chip, DateField, Field, PrimaryButton, Screen, useThemeColors } from '@/src/ui';
 import { getRecentExerciseNames, insertExerciseLog, todayLocal } from '@/src/db';
 import type { WeightUnit } from '@/src/db';
 
@@ -162,7 +162,6 @@ export default function LogWorkoutScreen() {
           </View>
         </View>
 
-        <Muted>Fill in whatever applies — leave the rest blank.</Muted>
         <PrimaryButton title={saving ? 'Saving…' : 'Save exercise'} onPress={save} disabled={saving} />
         <View style={{ height: 32 }} />
       </ScrollView>

@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { useState } from 'react';
 import {
   Pressable,
   StyleSheet,
@@ -7,10 +8,11 @@ import {
   View,
 } from 'react-native';
 import type { TextInputProps, ViewStyle } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 import { palette } from './theme';
 import type { ThemeColors } from './theme';
-import { addDaysLocal, formatDate, todayLocal } from './db';
+import { formatDate, toLocalDateString } from './db';
 
 /** The app is dark-mode only. */
 export function useThemeColors(): ThemeColors {
@@ -139,44 +141,43 @@ export function Field({ label, value, onChangeText, ...rest }: FieldProps) {
   );
 }
 
-/** Date picker as a simple day stepper. Defaults to today. */
+function parseLocalDate(yyyyMmDd: string): Date {
+  const [y, m, d] = yyyyMmDd.split('-').map(Number);
+  return new Date(y ?? 1970, (m ?? 1) - 1, d ?? 1);
+}
+
+/** Date picker: tap the field to open the native calendar. */
 export function DateField({ value, onChange }: { value: string; onChange: (d: string) => void }) {
   const c = useThemeColors();
-  const isToday = value === todayLocal();
-  const arrow = {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: c.border,
-    backgroundColor: c.card,
-  } as const;
+  const [open, setOpen] = useState(false);
   return (
     <View style={{ marginBottom: 10 }}>
       <Text style={{ color: c.sub, fontSize: 13, fontWeight: '600', marginBottom: 4 }}>Date</Text>
-      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-        <Pressable onPress={() => onChange(addDaysLocal(value, -1))} style={arrow} hitSlop={8}>
-          <Text style={{ color: c.text, fontSize: 18, fontWeight: '700' }}>‹</Text>
-        </Pressable>
-        <Text
-          style={{
-            flex: 1,
-            textAlign: 'center',
-            color: c.text,
-            fontSize: 16,
-            fontWeight: '600',
-          }}>
-          {formatDate(value)}
-          {isToday ? ' · Today' : ''}
-        </Text>
-        <Pressable onPress={() => onChange(addDaysLocal(value, 1))} style={arrow} hitSlop={8}>
-          <Text style={{ color: c.text, fontSize: 18, fontWeight: '700' }}>›</Text>
-        </Pressable>
-      </View>
-      {!isToday && (
-        <Pressable onPress={() => onChange(todayLocal())} hitSlop={8} style={{ marginTop: 6, alignSelf: 'flex-start' }}>
-          <Text style={{ color: c.accent, fontSize: 14, fontWeight: '600' }}>Back to today</Text>
-        </Pressable>
+      <Pressable
+        onPress={() => setOpen(true)}
+        style={({ pressed }) => ({
+          backgroundColor: c.card,
+          borderColor: c.border,
+          borderWidth: 1,
+          borderRadius: 10,
+          paddingHorizontal: 12,
+          paddingVertical: 12,
+          opacity: pressed ? 0.7 : 1,
+        })}>
+        <Text style={{ color: c.text, fontSize: 16, fontWeight: '600' }}>{formatDate(value)}</Text>
+      </Pressable>
+      {open && (
+        <DateTimePicker
+          value={parseLocalDate(value)}
+          mode="date"
+          display="default"
+          onChange={(event, selected) => {
+            setOpen(false);
+            if (event.type === 'set' && selected) {
+              onChange(toLocalDateString(selected));
+            }
+          }}
+        />
       )}
     </View>
   );

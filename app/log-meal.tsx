@@ -3,7 +3,7 @@ import { Alert, ScrollView, Text, View } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 
-import { Chip, DateField, Field, Muted, PrimaryButton, Screen, useThemeColors } from '@/src/ui';
+import { Chip, DateField, Field, PrimaryButton, Screen, useThemeColors } from '@/src/ui';
 import { getRecentFoodNames, insertFoodLog, todayLocal } from '@/src/db';
 
 export default function LogMealScreen() {
@@ -86,7 +86,6 @@ export default function LogMealScreen() {
           placeholder="e.g. 30"
         />
 
-        <Muted>Protein is calculated later — just log what you ate.</Muted>
         <PrimaryButton title={saving ? 'Saving…' : 'Save food'} onPress={save} disabled={saving} />
         <View style={{ height: 32 }} />
       </ScrollView>
