@@ -61,9 +61,9 @@ function DoneBar() {
           onPress={() => Keyboard.dismiss()}
           style={({ pressed }) => ({
             backgroundColor: c.accent,
-            borderRadius: 14,
+            borderRadius: 12,
             paddingHorizontal: 24,
-            paddingVertical: 11,
+            paddingVertical: 14,
             opacity: pressed ? 0.8 : 1,
           })}>
           <Text style={{ color: c.accentText, fontSize: 16, fontWeight: '700' }}>Done</Text>
