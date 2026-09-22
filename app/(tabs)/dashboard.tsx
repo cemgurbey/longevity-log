@@ -4,7 +4,7 @@ import { router, useFocusEffect } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 
 import { Card, Muted, PrimaryButton, Screen, Title, useThemeColors } from '@/src/ui';
-import { exportAllData, formatDate, getLast7DayStats } from '@/src/db';
+import { exportAllData, formatDate, getDayStats, toLocalDateString } from '@/src/db';
 import type { DayStats } from '@/src/db';
 import type { ThemeColors } from '@/src/theme';
 
@@ -44,23 +44,72 @@ function daySummary(day: DayStats): string {
   return parts.length > 0 ? parts.join('  ·  ') : 'Rest day';
 }
 
+/** "2026-09-22" -> "Sep 22" */
+function shortDate(yyyyMmDd: string): string {
+  const [y, m, d] = yyyyMmDd.split('-').map(Number);
+  return new Date(y ?? 1970, (m ?? 1) - 1, d ?? 1).toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric',
+  });
+}
+
+/** Seven ISO dates ending today, shifted back `offset` weeks, today first. */
+function weekDates(offset: number): string[] {
+  const dates: string[] = [];
+  const today = new Date();
+  for (let i = 0; i < 7; i++) {
+    dates.push(
+      toLocalDateString(
+        new Date(today.getFullYear(), today.getMonth(), today.getDate() - offset * 7 - i),
+      ),
+    );
+  }
+  return dates;
+}
+
+function WeekNavButton({
+  label,
+  disabled,
+  onPress,
+  c,
+}: {
+  label: string;
+  disabled?: boolean;
+  onPress: () => void;
+  c: ThemeColors;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={disabled}
+      hitSlop={12}
+      style={({ pressed }) => ({ padding: 6, opacity: disabled ? 0.25 : pressed ? 0.6 : 1 })}>
+      <Text style={{ color: c.text, fontSize: 22, fontWeight: '600' }}>{label}</Text>
+    </Pressable>
+  );
+}
+
 export default function DashboardScreen() {
   const db = useSQLiteContext();
   const c = useThemeColors();
+  const [weekOffset, setWeekOffset] = useState(0);
   const [stats, setStats] = useState<DayStats[]>([]);
   const [sharing, setSharing] = useState(false);
+
+  const dates = weekDates(weekOffset);
+  const weekLabel = `${shortDate(dates[dates.length - 1]!)} – ${shortDate(dates[0]!)}`;
 
   useFocusEffect(
     useCallback(() => {
       let alive = true;
       (async () => {
-        const s = await getLast7DayStats(db);
+        const s = await getDayStats(db, weekDates(weekOffset));
         if (alive) setStats(s);
       })();
       return () => {
         alive = false;
       };
-    }, [db]),
+    }, [db, weekOffset]),
   );
 
   const totalExercises = stats.reduce((a, s) => a + s.exercises, 0);
@@ -92,7 +141,9 @@ export default function DashboardScreen() {
         <PrimaryButton title={sharing ? 'Preparing…' : 'Export all data (JSON)'} onPress={onExport} disabled={sharing} />
         <View style={{ height: 12 }} />
         <Card>
-          <Text style={{ color: c.text, fontSize: 16, fontWeight: '700', marginBottom: 6 }}>Last 7 days</Text>
+          <Text style={{ color: c.text, fontSize: 16, fontWeight: '700', marginBottom: 6 }}>
+            {weekOffset === 0 ? 'Last 7 days' : weekLabel}
+          </Text>
           <StatRow label="Exercises logged" value={String(totalExercises)} c={c} />
           <StatRow label="Volume lifted" value={`${totalVolume.toLocaleString()} kg`} c={c} />
           <StatRow label="Distance" value={`${totalDistance.toLocaleString()} m`} c={c} />
@@ -100,9 +151,25 @@ export default function DashboardScreen() {
           <StatRow label="Foods logged" value={String(totalFoods)} last c={c} />
         </Card>
         <Card>
-          <Text style={{ color: c.text, fontSize: 16, fontWeight: '700', marginBottom: 10 }}>
+          <Text style={{ color: c.text, fontSize: 16, fontWeight: '700', marginBottom: 4 }}>
             Daily activity
           </Text>
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: 8,
+            }}>
+            <WeekNavButton label="‹" c={c} onPress={() => setWeekOffset((o) => o + 1)} />
+            <Text style={{ color: c.sub, fontSize: 14, fontWeight: '600' }}>{weekLabel}</Text>
+            <WeekNavButton
+              label="›"
+              c={c}
+              disabled={weekOffset === 0}
+              onPress={() => setWeekOffset((o) => Math.max(0, o - 1))}
+            />
+          </View>
           {stats.map((day) => (
             <Pressable
               key={day.date}

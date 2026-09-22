@@ -237,10 +237,10 @@ export interface DayStats {
 
 const LB_TO_KG = 0.45359237;
 
-export async function getLast7DayStats(db: SQLiteDatabase): Promise<DayStats[]> {
-  const since = daysAgoLocal(6);
-  const dates: string[] = [];
-  for (let i = 6; i >= 0; i--) dates.push(daysAgoLocal(i));
+/** Stats for the given dates, returned in the same order. */
+export async function getDayStats(db: SQLiteDatabase, dates: string[]): Promise<DayStats[]> {
+  if (dates.length === 0) return [];
+  const since = dates.reduce((a, b) => (a < b ? a : b));
 
   const exRows = await db.getAllAsync<{ date: string; n: number; vol: number; dist: number; dur: number }>(
     `SELECT date,
