@@ -21,7 +21,65 @@ export interface FoodLog {
   grams: number | null;
 }
 
-const DB_VERSION = 2;
+/** Per-100g nutrition reference for a food. All macro amounts are grams per 100 g. */
+export interface FoodNutrition {
+  id: number;
+  name: string;
+  default_grams: number | null;
+  protein_g: number | null;
+  carbs_g: number | null;
+  sugar_g: number | null;
+  fiber_g: number | null;
+  fat_g: number | null;
+  saturated_fat_g: number | null;
+  omega3_g: number | null;
+  vitamins: string | null;
+  minerals: string | null;
+}
+
+const DB_VERSION = 3;
+
+/** [name, typical serving in grams] seeds for the nutrition reference table. */
+const SEED_NUTRITION_FOODS: [string, number][] = [
+  ['Pumpkin seeds', 30],
+  ['Oatmeal', 40],
+  ['Chia seeds', 15],
+  ['Flax seeds', 15],
+  ['Hemp hearts', 30],
+  ['Bourguignon cubes', 150],
+  ['Eggs', 60],
+  ['Banana', 120],
+  ['Avocado', 100],
+  ['Carrot', 60],
+  ['Lemon', 30],
+  ['Beetroots', 100],
+  ['Mini pepper', 30],
+  ['Radish', 20],
+  ['Mint', 5],
+  ['Parsley', 10],
+  ['Olive oil', 15],
+  ['Ginger', 10],
+  ['Quinoa', 50],
+  ['Almonds', 30],
+  ['Walnuts', 30],
+  ['Spring mix salad', 50],
+  ['Hazelnuts', 30],
+  ['Cashews', 30],
+  ['Brazil nuts', 15],
+  ['Yogurt 4% fat', 200],
+  ['Milk 3.8% fat', 250],
+  ['Salmon', 150],
+  ['Potatoes', 200],
+  ['Asparagus', 100],
+  ['Chickpeas', 100],
+  ['Red lentil', 50],
+  ['Coconut milk', 100],
+  ['Coconut water', 250],
+  ['Firm tofu', 150],
+  ['Coffee', 250],
+  ['Chicken breast', 150],
+  ['Chicken thighs', 150],
+];
 
 /** Creates / migrates the schema. Passed as `onInit` to SQLiteProvider. */
 export async function migrateDbIfNeeded(db: SQLiteDatabase): Promise<void> {
@@ -57,6 +115,34 @@ export async function migrateDbIfNeeded(db: SQLiteDatabase): Promise<void> {
       CREATE INDEX IF NOT EXISTS idx_exercise_logs_date ON exercise_logs(date);
       CREATE INDEX IF NOT EXISTS idx_food_logs_date ON food_logs(date);
     `);
+  }
+
+  if (current < 3) {
+    // v3 adds the per-100g nutrition reference table, seeded with the user's
+    // staple foods (names + typical serving sizes; values filled in by hand).
+    await db.execAsync(`
+      CREATE TABLE IF NOT EXISTS food_nutrition (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL UNIQUE,
+        default_grams REAL,
+        protein_g REAL,
+        carbs_g REAL,
+        sugar_g REAL,
+        fiber_g REAL,
+        fat_g REAL,
+        saturated_fat_g REAL,
+        omega3_g REAL,
+        vitamins TEXT,
+        minerals TEXT
+      );
+    `);
+    for (const [name, defaultGrams] of SEED_NUTRITION_FOODS) {
+      await db.runAsync(
+        'INSERT OR IGNORE INTO food_nutrition (name, default_grams) VALUES (?, ?)',
+        name,
+        defaultGrams,
+      );
+    }
   }
 
   await db.execAsync(`PRAGMA user_version = ${DB_VERSION}`);
@@ -224,6 +310,75 @@ export async function getRecentFoodLogs(db: SQLiteDatabase, limit = 20): Promise
      ORDER BY id DESC LIMIT ?`,
     limit,
   );
+}
+
+const NUTRITION_COLUMNS =
+  'id, name, default_grams, protein_g, carbs_g, sugar_g, fiber_g, fat_g, ' +
+  'saturated_fat_g, omega3_g, vitamins, minerals';
+
+/** All nutrition reference entries, alphabetical. */
+export async function getAllNutrition(db: SQLiteDatabase): Promise<FoodNutrition[]> {
+  return db.getAllAsync<FoodNutrition>(
+    `SELECT ${NUTRITION_COLUMNS} FROM food_nutrition ORDER BY name ASC`,
+  );
+}
+
+export async function getNutritionById(db: SQLiteDatabase, id: number): Promise<FoodNutrition | null> {
+  const row = await db.getFirstAsync<FoodNutrition>(
+    `SELECT ${NUTRITION_COLUMNS} FROM food_nutrition WHERE id = ?`,
+    id,
+  );
+  return row ?? null;
+}
+
+export async function insertNutrition(
+  db: SQLiteDatabase,
+  n: Omit<FoodNutrition, 'id'>,
+): Promise<number> {
+  const res = await db.runAsync(
+    `INSERT INTO food_nutrition
+       (name, default_grams, protein_g, carbs_g, sugar_g, fiber_g, fat_g,
+        saturated_fat_g, omega3_g, vitamins, minerals)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    n.name,
+    n.default_grams,
+    n.protein_g,
+    n.carbs_g,
+    n.sugar_g,
+    n.fiber_g,
+    n.fat_g,
+    n.saturated_fat_g,
+    n.omega3_g,
+    n.vitamins,
+    n.minerals,
+  );
+  return res.lastInsertRowId;
+}
+
+export async function updateNutrition(db: SQLiteDatabase, n: FoodNutrition): Promise<void> {
+  await db.runAsync(
+    `UPDATE food_nutrition SET
+       name = ?, default_grams = ?, protein_g = ?, carbs_g = ?, sugar_g = ?,
+       fiber_g = ?, fat_g = ?, saturated_fat_g = ?, omega3_g = ?,
+       vitamins = ?, minerals = ?
+     WHERE id = ?`,
+    n.name,
+    n.default_grams,
+    n.protein_g,
+    n.carbs_g,
+    n.sugar_g,
+    n.fiber_g,
+    n.fat_g,
+    n.saturated_fat_g,
+    n.omega3_g,
+    n.vitamins,
+    n.minerals,
+    n.id,
+  );
+}
+
+export async function deleteNutrition(db: SQLiteDatabase, id: number): Promise<void> {
+  await db.runAsync('DELETE FROM food_nutrition WHERE id = ?', id);
 }
 
 export interface DayStats {

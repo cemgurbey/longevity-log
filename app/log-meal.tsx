@@ -4,16 +4,21 @@ import { router, useFocusEffect } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 
 import { Chip, FormScreen, FormScrollView, PrimaryButton, useThemeColors } from '@/src/ui';
-import { getRecentFoodLogs, insertFoodLog } from '@/src/db';
-import type { FoodLog } from '@/src/db';
+import { getAllNutrition, getRecentFoodLogs, insertFoodLog } from '@/src/db';
 import { FoodFormFields, emptyFoodForm, parseFoodForm } from '@/src/food-form';
 import type { FoodFormValue } from '@/src/food-form';
+
+/** One quick-add chip: a food name plus the grams to pre-fill. */
+interface QuickAddItem {
+  name: string;
+  grams: string;
+}
 
 export default function LogMealScreen() {
   const db = useSQLiteContext();
   const c = useThemeColors();
   const [form, setForm] = useState<FoodFormValue>(emptyFoodForm);
-  const [recent, setRecent] = useState<FoodLog[]>([]);
+  const [recent, setRecent] = useState<QuickAddItem[]>([]);
   const [saving, setSaving] = useState(false);
 
   useFocusEffect(
@@ -21,8 +26,24 @@ export default function LogMealScreen() {
       let alive = true;
       setForm(emptyFoodForm());
       (async () => {
-        const rows = await getRecentFoodLogs(db);
-        if (alive) setRecent(rows);
+        const [logs, nutrition] = await Promise.all([getRecentFoodLogs(db), getAllNutrition(db)]);
+        // Recently logged foods first (with the user's own grams), then the
+        // nutrition reference foods not yet logged (with default servings).
+        const items: QuickAddItem[] = logs.map((f) => ({
+          name: f.name,
+          grams: f.grams != null ? String(f.grams) : '',
+        }));
+        const seen = new Set(logs.map((f) => f.name.toLowerCase()));
+        for (const n of nutrition) {
+          if (items.length >= 20) break;
+          if (seen.has(n.name.toLowerCase())) continue;
+          seen.add(n.name.toLowerCase());
+          items.push({
+            name: n.name,
+            grams: n.default_grams != null ? String(n.default_grams) : '',
+          });
+        }
+        if (alive) setRecent(items);
       })();
       return () => {
         alive = false;
@@ -30,12 +51,12 @@ export default function LogMealScreen() {
     }, [db]),
   );
 
-  /** Fill the whole form from a previous entry (everything except the date). */
-  function applyRecent(f: FoodLog) {
+  /** Fill the whole form from a quick-add entry (everything except the date). */
+  function applyRecent(f: QuickAddItem) {
     setForm((prev) => ({
       ...prev,
       name: f.name,
-      grams: f.grams != null ? String(f.grams) : '',
+      grams: f.grams,
     }));
   }
 
@@ -61,7 +82,7 @@ export default function LogMealScreen() {
         {recent.length > 0 && (
           <View style={{ marginBottom: 10 }}>
             <Text style={{ color: c.sub, fontSize: 13, fontWeight: '600', marginBottom: 6 }}>
-              Recent foods
+              Quick add
             </Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
               <View style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 2 }}>

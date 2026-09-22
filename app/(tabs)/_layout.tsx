@@ -6,7 +6,7 @@ import { palette } from '@/src/theme';
 
 const c = palette.dark;
 
-type Shape = 'triangle' | 'circle' | 'square';
+type Shape = 'triangle' | 'circle' | 'square' | 'diamond';
 
 function TabIcon({ shape, color }: { shape: Shape; color: ColorValue }) {
   if (shape === 'circle') {
@@ -14,6 +14,18 @@ function TabIcon({ shape, color }: { shape: Shape; color: ColorValue }) {
   }
   if (shape === 'square') {
     return <View style={{ width: 18, height: 18, backgroundColor: color }} />;
+  }
+  if (shape === 'diamond') {
+    return (
+      <View
+        style={{
+          width: 17,
+          height: 17,
+          backgroundColor: color,
+          transform: [{ rotate: '45deg' }],
+        }}
+      />
+    );
   }
   return (
     <View
@@ -61,6 +73,13 @@ export default function TabLayout() {
         options={{
           title: 'Food',
           tabBarIcon: ({ color }) => <TabIcon shape="circle" color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="nutrition"
+        options={{
+          title: 'Nutrition',
+          tabBarIcon: ({ color }) => <TabIcon shape="diamond" color={color} />,
         }}
       />
       <Tabs.Screen
