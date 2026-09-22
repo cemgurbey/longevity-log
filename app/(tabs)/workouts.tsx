@@ -4,19 +4,8 @@ import { router, useFocusEffect } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 
 import { Card, EmptyState, Muted, PrimaryButton, Screen, Title, useThemeColors } from '@/src/ui';
-import { formatDate, getExerciseLogs } from '@/src/db';
+import { formatDate, getExerciseLogs, summarizeExerciseLog } from '@/src/db';
 import type { ExerciseLog } from '@/src/db';
-
-function summarize(e: ExerciseLog): string {
-  const parts: string[] = [];
-  if (e.sets != null && e.reps != null) parts.push(`${e.sets} x ${e.reps}`);
-  else if (e.sets != null) parts.push(`${e.sets} sets`);
-  else if (e.reps != null) parts.push(`${e.reps} reps`);
-  if (e.weight != null) parts.push(`${e.weight} ${e.weight_unit ?? 'kg'}`);
-  if (e.duration_min != null) parts.push(`${e.duration_min} min`);
-  if (e.distance_m != null) parts.push(`${e.distance_m} m`);
-  return parts.length > 0 ? parts.join('  ·  ') : 'Logged';
-}
 
 export default function WorkoutsScreen() {
   const db = useSQLiteContext();
@@ -69,7 +58,7 @@ export default function WorkoutsScreen() {
                   opacity: pressed ? 0.6 : 1,
                 })}>
                 <Text style={{ color: c.text, fontSize: 15, fontWeight: '600' }}>{e.exercise}</Text>
-                <Muted>{summarize(e)}</Muted>
+                <Muted>{summarizeExerciseLog(e)}</Muted>
               </Pressable>
             ))}
           </Card>

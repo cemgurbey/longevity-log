@@ -178,6 +178,33 @@ export async function deleteFoodLog(db: SQLiteDatabase, id: number): Promise<voi
   await db.runAsync('DELETE FROM food_logs WHERE id = ?', id);
 }
 
+export async function getExerciseLogsByDate(db: SQLiteDatabase, date: string): Promise<ExerciseLog[]> {
+  return db.getAllAsync<ExerciseLog>(
+    `SELECT id, date, exercise, sets, reps, weight, weight_unit, duration_min, distance_m
+     FROM exercise_logs WHERE date = ? ORDER BY id DESC`,
+    date,
+  );
+}
+
+export async function getFoodLogsByDate(db: SQLiteDatabase, date: string): Promise<FoodLog[]> {
+  return db.getAllAsync<FoodLog>(
+    'SELECT id, date, name, grams FROM food_logs WHERE date = ? ORDER BY id DESC',
+    date,
+  );
+}
+
+/** One-line summary of an exercise entry, e.g. "5 x 5  ·  165 kg  ·  30 min". */
+export function summarizeExerciseLog(e: ExerciseLog): string {
+  const parts: string[] = [];
+  if (e.sets != null && e.reps != null) parts.push(`${e.sets} x ${e.reps}`);
+  else if (e.sets != null) parts.push(`${e.sets} sets`);
+  else if (e.reps != null) parts.push(`${e.reps} reps`);
+  if (e.weight != null) parts.push(`${e.weight} ${e.weight_unit ?? 'kg'}`);
+  if (e.duration_min != null) parts.push(`${e.duration_min} min`);
+  if (e.distance_m != null) parts.push(`${e.distance_m} m`);
+  return parts.length > 0 ? parts.join('  ·  ') : 'Logged';
+}
+
 /** Most recent log per exercise name (for quick-add), newest first. */
 export async function getRecentExerciseLogs(db: SQLiteDatabase, limit = 20): Promise<ExerciseLog[]> {
   return db.getAllAsync<ExerciseLog>(

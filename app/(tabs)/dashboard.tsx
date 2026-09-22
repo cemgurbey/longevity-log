@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
-import { ScrollView, Share, Text, View } from 'react-native';
-import { useFocusEffect } from 'expo-router';
+import { Pressable, ScrollView, Share, Text, View } from 'react-native';
+import { router, useFocusEffect } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 
 import { Card, Muted, PrimaryButton, Screen, Title, useThemeColors } from '@/src/ui';
@@ -104,12 +104,15 @@ export default function DashboardScreen() {
             Daily activity
           </Text>
           {stats.map((day) => (
-            <View key={day.date} style={{ marginBottom: 12 }}>
+            <Pressable
+              key={day.date}
+              onPress={() => router.push({ pathname: '/day/[date]', params: { date: day.date } })}
+              style={({ pressed }) => ({ marginBottom: 12, opacity: pressed ? 0.6 : 1 })}>
               <Text style={{ color: c.text, fontSize: 14, fontWeight: '600', marginBottom: 2 }}>
                 {formatDate(day.date)}
               </Text>
               <Muted>{daySummary(day)}</Muted>
-            </View>
+            </Pressable>
           ))}
         </Card>
         <View style={{ height: 24 }} />
