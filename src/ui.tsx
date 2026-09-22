@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import {
   InputAccessoryView,
   Keyboard,
@@ -39,23 +39,23 @@ export function FormScreen({ children, style }: { children: ReactNode; style?: V
         style={{ flex: 1 }}>
         {children}
       </KeyboardAvoidingView>
-      <DoneBar />
     </Screen>
   );
 }
-
-const DONE_BAR_ID = 'doneBar';
 
 /**
  * Floating "Done" button just above the iOS keyboard, banking-app style: a
  * filled squircle that dismisses the keyboard. This is what makes the keyboard
  * dismissable on number pads, which have no return key of their own.
+ *
+ * Note: each field gets its own InputAccessoryView with a unique ID. Sharing
+ * one ID across fields is broken since React Native 0.76 (facebook/react-native#47865):
+ * the bar would only appear for the first-focused field.
  */
-function DoneBar() {
+function DoneBar({ nativeID }: { nativeID: string }) {
   const c = useThemeColors();
-  if (Platform.OS !== 'ios') return null;
   return (
-    <InputAccessoryView nativeID={DONE_BAR_ID}>
+    <InputAccessoryView nativeID={nativeID}>
       <View style={{ alignItems: 'flex-end', paddingRight: 16, paddingBottom: 10 }}>
         <Pressable
           onPress={() => Keyboard.dismiss()}
@@ -185,6 +185,7 @@ interface FieldProps extends Omit<TextInputProps, 'style'> {
 
 export function Field({ label, value, onChangeText, ...rest }: FieldProps) {
   const c = useThemeColors();
+  const accessoryID = `doneBar-${useId().replace(/[^a-zA-Z0-9]/g, '')}`;
   return (
     <View style={{ marginBottom: 10 }}>
       <Text style={{ color: c.sub, fontSize: 13, fontWeight: '600', marginBottom: 4 }}>{label}</Text>
@@ -203,8 +204,9 @@ export function Field({ label, value, onChangeText, ...rest }: FieldProps) {
           color: c.text,
         }}
         {...rest}
-        inputAccessoryViewID={Platform.OS === 'ios' ? DONE_BAR_ID : undefined}
+        inputAccessoryViewID={Platform.OS === 'ios' ? accessoryID : undefined}
       />
+      {Platform.OS === 'ios' && <DoneBar nativeID={accessoryID} />}
     </View>
   );
 }
