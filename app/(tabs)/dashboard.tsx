@@ -53,6 +53,18 @@ function shortDate(yyyyMmDd: string): string {
   });
 }
 
+/** Seven ISO dates ending today, newest first. */
+function last7Dates(): string[] {
+  const dates: string[] = [];
+  const today = new Date();
+  for (let i = 0; i < 7; i++) {
+    dates.push(
+      toLocalDateString(new Date(today.getFullYear(), today.getMonth(), today.getDate() - i)),
+    );
+  }
+  return dates;
+}
+
 /**
  * ISO dates of the Monday–Sunday week containing today, shifted back `offset`
  * weeks, newest first. The current week only includes days up to today.
@@ -101,7 +113,8 @@ export default function DashboardScreen() {
   const db = useSQLiteContext();
   const c = useThemeColors();
   const [weekOffset, setWeekOffset] = useState(0);
-  const [stats, setStats] = useState<DayStats[]>([]);
+  const [weekStats, setWeekStats] = useState<DayStats[]>([]);
+  const [last7Stats, setLast7Stats] = useState<DayStats[]>([]);
   const [sharing, setSharing] = useState(false);
 
   const dates = weekDates(weekOffset);
@@ -111,8 +124,14 @@ export default function DashboardScreen() {
     useCallback(() => {
       let alive = true;
       (async () => {
-        const s = await getDayStats(db, weekDates(weekOffset));
-        if (alive) setStats(s);
+        const [w, l] = await Promise.all([
+          getDayStats(db, weekDates(weekOffset)),
+          getDayStats(db, last7Dates()),
+        ]);
+        if (alive) {
+          setWeekStats(w);
+          setLast7Stats(l);
+        }
       })();
       return () => {
         alive = false;
@@ -120,11 +139,11 @@ export default function DashboardScreen() {
     }, [db, weekOffset]),
   );
 
-  const totalExercises = stats.reduce((a, s) => a + s.exercises, 0);
-  const totalVolume = stats.reduce((a, s) => a + s.volumeKg, 0);
-  const totalDistance = stats.reduce((a, s) => a + s.distanceM, 0);
-  const totalDuration = stats.reduce((a, s) => a + s.durationMin, 0);
-  const totalFoods = stats.reduce((a, s) => a + s.foods, 0);
+  const totalExercises = last7Stats.reduce((a, s) => a + s.exercises, 0);
+  const totalVolume = last7Stats.reduce((a, s) => a + s.volumeKg, 0);
+  const totalDistance = last7Stats.reduce((a, s) => a + s.distanceM, 0);
+  const totalDuration = last7Stats.reduce((a, s) => a + s.durationMin, 0);
+  const totalFoods = last7Stats.reduce((a, s) => a + s.foods, 0);
 
   async function onExport() {
     if (sharing) return;
@@ -150,7 +169,7 @@ export default function DashboardScreen() {
         <View style={{ height: 12 }} />
         <Card>
           <Text style={{ color: c.text, fontSize: 16, fontWeight: '700', marginBottom: 6 }}>
-            {weekOffset === 0 ? 'Last 7 days' : weekLabel}
+            Last 7 days
           </Text>
           <StatRow label="Exercises logged" value={String(totalExercises)} c={c} />
           <StatRow label="Volume lifted" value={`${totalVolume.toLocaleString()} kg`} c={c} />
@@ -178,7 +197,7 @@ export default function DashboardScreen() {
               onPress={() => setWeekOffset((o) => Math.max(0, o - 1))}
             />
           </View>
-          {stats.map((day) => (
+          {weekStats.map((day) => (
             <Pressable
               key={day.date}
               onPress={() => router.push({ pathname: '/day/[date]', params: { date: day.date } })}
