@@ -136,6 +136,48 @@ export async function getFoodLogs(db: SQLiteDatabase, limit = 500): Promise<Food
   );
 }
 
+export async function getExerciseLogById(db: SQLiteDatabase, id: number): Promise<ExerciseLog | null> {
+  return db.getFirstAsync<ExerciseLog>(
+    `SELECT id, date, exercise, sets, reps, weight, weight_unit, duration_min, distance_m
+     FROM exercise_logs WHERE id = ?`,
+    id,
+  );
+}
+
+export async function updateExerciseLog(db: SQLiteDatabase, e: ExerciseLog): Promise<void> {
+  await db.runAsync(
+    `UPDATE exercise_logs
+     SET date = ?, exercise = ?, sets = ?, reps = ?, weight = ?,
+         weight_unit = ?, duration_min = ?, distance_m = ?
+     WHERE id = ?`,
+    e.date,
+    e.exercise,
+    e.sets,
+    e.reps,
+    e.weight,
+    e.weight_unit,
+    e.duration_min,
+    e.distance_m,
+    e.id,
+  );
+}
+
+export async function deleteExerciseLog(db: SQLiteDatabase, id: number): Promise<void> {
+  await db.runAsync('DELETE FROM exercise_logs WHERE id = ?', id);
+}
+
+export async function getFoodLogById(db: SQLiteDatabase, id: number): Promise<FoodLog | null> {
+  return db.getFirstAsync<FoodLog>('SELECT id, date, name, grams FROM food_logs WHERE id = ?', id);
+}
+
+export async function updateFoodLog(db: SQLiteDatabase, f: FoodLog): Promise<void> {
+  await db.runAsync('UPDATE food_logs SET date = ?, name = ?, grams = ? WHERE id = ?', f.date, f.name, f.grams, f.id);
+}
+
+export async function deleteFoodLog(db: SQLiteDatabase, id: number): Promise<void> {
+  await db.runAsync('DELETE FROM food_logs WHERE id = ?', id);
+}
+
 /** Most recent log per exercise name (for quick-add), newest first. */
 export async function getRecentExerciseLogs(db: SQLiteDatabase, limit = 20): Promise<ExerciseLog[]> {
   return db.getAllAsync<ExerciseLog>(

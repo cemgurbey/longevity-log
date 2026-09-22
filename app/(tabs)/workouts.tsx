@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 
@@ -59,16 +59,18 @@ export default function WorkoutsScreen() {
               {formatDate(date)}
             </Text>
             {entries.map((e) => (
-              <View
+              <Pressable
                 key={e.id}
-                style={{
+                onPress={() => router.push({ pathname: '/edit-workout/[id]', params: { id: String(e.id) } })}
+                style={({ pressed }) => ({
                   paddingVertical: 7,
                   borderTopWidth: 1,
                   borderTopColor: c.border,
-                }}>
+                  opacity: pressed ? 0.6 : 1,
+                })}>
                 <Text style={{ color: c.text, fontSize: 15, fontWeight: '600' }}>{e.exercise}</Text>
                 <Muted>{summarize(e)}</Muted>
-              </View>
+              </Pressable>
             ))}
           </Card>
         ))}

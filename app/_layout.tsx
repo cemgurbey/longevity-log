@@ -61,6 +61,8 @@ function RootLayoutNav() {
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen name="log-workout" options={{ presentation: 'modal', title: 'Log exercise' }} />
           <Stack.Screen name="log-meal" options={{ presentation: 'modal', title: 'Log food' }} />
+          <Stack.Screen name="edit-workout/[id]" options={{ presentation: 'modal', title: 'Edit exercise' }} />
+          <Stack.Screen name="edit-meal/[id]" options={{ presentation: 'modal', title: 'Edit food' }} />
         </Stack>
       </ThemeProvider>
     </SQLiteProvider>

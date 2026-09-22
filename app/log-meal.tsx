@@ -3,22 +3,23 @@ import { Alert, ScrollView, Text, View } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 
-import { Chip, DateField, Field, PrimaryButton, Screen, useThemeColors } from '@/src/ui';
-import { getRecentFoodLogs, insertFoodLog, todayLocal } from '@/src/db';
+import { Chip, PrimaryButton, Screen, useThemeColors } from '@/src/ui';
+import { getRecentFoodLogs, insertFoodLog } from '@/src/db';
 import type { FoodLog } from '@/src/db';
+import { FoodFormFields, emptyFoodForm, parseFoodForm } from '@/src/food-form';
+import type { FoodFormValue } from '@/src/food-form';
 
 export default function LogMealScreen() {
   const db = useSQLiteContext();
   const c = useThemeColors();
-  const [date, setDate] = useState(todayLocal());
-  const [name, setName] = useState('');
+  const [form, setForm] = useState<FoodFormValue>(emptyFoodForm);
   const [recent, setRecent] = useState<FoodLog[]>([]);
-  const [grams, setGrams] = useState('');
   const [saving, setSaving] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
       let alive = true;
+      setForm(emptyFoodForm());
       (async () => {
         const rows = await getRecentFoodLogs(db);
         if (alive) setRecent(rows);
@@ -31,24 +32,23 @@ export default function LogMealScreen() {
 
   /** Fill the whole form from a previous entry (everything except the date). */
   function applyRecent(f: FoodLog) {
-    setName(f.name);
-    setGrams(f.grams != null ? String(f.grams) : '');
+    setForm((prev) => ({
+      ...prev,
+      name: f.name,
+      grams: f.grams != null ? String(f.grams) : '',
+    }));
   }
 
   async function save() {
     if (saving) return;
-    const trimmed = name.trim();
-    if (!trimmed) {
+    const parsed = parseFoodForm(form);
+    if (!parsed) {
       Alert.alert('Missing food', 'Enter a food name or pick a recent one.');
       return;
     }
     setSaving(true);
     try {
-      await insertFoodLog(db, {
-        date,
-        name: trimmed,
-        grams: grams.trim() === '' ? null : parseFloat(grams),
-      });
+      await insertFoodLog(db, parsed);
       router.back();
     } finally {
       setSaving(false);
@@ -58,8 +58,6 @@ export default function LogMealScreen() {
   return (
     <Screen>
       <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-        <DateField value={date} onChange={setDate} />
-
         {recent.length > 0 && (
           <View style={{ marginBottom: 10 }}>
             <Text style={{ color: c.sub, fontSize: 13, fontWeight: '600', marginBottom: 6 }}>
@@ -71,7 +69,7 @@ export default function LogMealScreen() {
                   <Chip
                     key={entry.name}
                     label={entry.name}
-                    selected={name.trim().toLowerCase() === entry.name.toLowerCase()}
+                    selected={form.name.trim().toLowerCase() === entry.name.toLowerCase()}
                     onPress={() => applyRecent(entry)}
                   />
                 ))}
@@ -80,20 +78,7 @@ export default function LogMealScreen() {
           </View>
         )}
 
-        <Field
-          label="Food"
-          value={name}
-          onChangeText={setName}
-          placeholder="e.g. Pumpkin seeds"
-          autoCapitalize="words"
-        />
-        <Field
-          label="Weight (g)"
-          value={grams}
-          onChangeText={(t) => setGrams(t.replace(/[^0-9.]/g, ''))}
-          keyboardType="decimal-pad"
-          placeholder="e.g. 30"
-        />
+        <FoodFormFields value={form} onChange={setForm} />
 
         <PrimaryButton title={saving ? 'Saving…' : 'Save food'} onPress={save} disabled={saving} />
         <View style={{ height: 32 }} />

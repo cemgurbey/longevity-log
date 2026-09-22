@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 
@@ -48,19 +48,21 @@ export default function MealsScreen() {
               {formatDate(date)}
             </Text>
             {entries.map((f) => (
-              <View
+              <Pressable
                 key={f.id}
-                style={{
+                onPress={() => router.push({ pathname: '/edit-meal/[id]', params: { id: String(f.id) } })}
+                style={({ pressed }) => ({
                   flexDirection: 'row',
                   justifyContent: 'space-between',
                   alignItems: 'center',
                   paddingVertical: 7,
                   borderTopWidth: 1,
                   borderTopColor: c.border,
-                }}>
+                  opacity: pressed ? 0.6 : 1,
+                })}>
                 <Text style={{ color: c.text, fontSize: 15, fontWeight: '600', flex: 1 }}>{f.name}</Text>
                 <Muted>{f.grams != null ? `${f.grams} g` : ''}</Muted>
-              </View>
+              </Pressable>
             ))}
           </Card>
         ))}

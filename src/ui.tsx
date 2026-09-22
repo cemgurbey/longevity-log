@@ -245,6 +245,35 @@ export function DateField({ value, onChange }: { value: string; onChange: (d: st
   );
 }
 
+export function DangerButton({
+  title,
+  onPress,
+  disabled,
+}: {
+  title: string;
+  onPress: () => void;
+  disabled?: boolean;
+}) {
+  const c = useThemeColors();
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={disabled}
+      style={({ pressed }) => ({
+        backgroundColor: 'transparent',
+        borderColor: c.danger,
+        borderWidth: 1,
+        borderRadius: 12,
+        paddingVertical: 14,
+        alignItems: 'center',
+        opacity: disabled ? 0.5 : pressed ? 0.7 : 1,
+        marginTop: 10,
+      })}>
+      <Text style={{ color: c.danger, fontSize: 16, fontWeight: '700' }}>{title}</Text>
+    </Pressable>
+  );
+}
+
 export function EmptyState({ message }: { message: string }) {
   const c = useThemeColors();
   return (
