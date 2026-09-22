@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { useState } from 'react';
 import {
+  Keyboard,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -41,14 +42,20 @@ export function FormScreen({ children, style }: { children: ReactNode; style?: V
   );
 }
 
-/** Form scroll container: dragging down dismisses the keyboard (interactive on iOS, like Messages). */
+/**
+ * Form scroll container. Tapping anywhere outside a text input dismisses the
+ * keyboard — the conventional iOS way to get rid of it, and it works for
+ * number pads too. Taps on fields, chips and buttons are unaffected.
+ */
 export function FormScrollView({ children }: { children: ReactNode }) {
   return (
     <ScrollView
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
-      keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}>
-      {children}
+      contentContainerStyle={{ flexGrow: 1 }}>
+      <Pressable onPress={() => Keyboard.dismiss()} style={{ flex: 1 }}>
+        {children}
+      </Pressable>
     </ScrollView>
   );
 }
