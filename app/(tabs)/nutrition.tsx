@@ -52,16 +52,12 @@ export default function NutritionScreen() {
                     router.push({ pathname: '/edit-nutrition/[id]', params: { id: String(f.id) } })
                   }
                   style={({ pressed }) => ({
-                    flexDirection: 'row',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    paddingVertical: 7,
+                    paddingVertical: 9,
                     borderTopWidth: i === 0 ? 0 : 1,
                     borderTopColor: c.border,
                     opacity: pressed ? 0.6 : 1,
                   })}>
-                  <Text
-                    style={{ color: c.text, fontSize: 15, fontWeight: '600', flex: 1, marginRight: 8 }}>
+                  <Text style={{ color: c.text, fontSize: 16, fontWeight: '600', marginBottom: 3 }}>
                     {f.name}
                   </Text>
                   {summary != null ? (
