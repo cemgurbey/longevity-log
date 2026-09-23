@@ -37,7 +37,7 @@ export interface FoodNutrition {
   minerals: string | null;
 }
 
-const DB_VERSION = 4;
+const DB_VERSION = 5;
 
 /**
  * Researched per-100g values:
@@ -58,44 +58,44 @@ type NutritionSeedValues = [
 
 /** [name, typical serving in grams] seeds for the nutrition reference table. */
 const SEED_NUTRITION_FOODS: [string, number][] = [
-  ['Pumpkin seeds', 30],
-  ['Oatmeal', 40],
-  ['Chia seeds', 15],
-  ['Flax seeds', 15],
-  ['Hemp hearts', 30],
-  ['Bourguignon cubes', 150],
-  ['Eggs', 60],
-  ['Banana', 120],
+  ['Pumpkin seeds', 100],
+  ['Oatmeal', 100],
+  ['Chia seeds', 100],
+  ['Flax seeds', 100],
+  ['Hemp hearts', 100],
+  ['Bourguignon cubes', 100],
+  ['Eggs', 100],
+  ['Banana', 100],
   ['Avocado', 100],
-  ['Carrot', 60],
-  ['Lemon', 30],
+  ['Carrot', 100],
+  ['Lemon', 100],
   ['Beetroots', 100],
-  ['Mini pepper', 30],
-  ['Radish', 20],
-  ['Mint', 5],
-  ['Parsley', 10],
-  ['Olive oil', 15],
-  ['Ginger', 10],
-  ['Quinoa', 50],
-  ['Almonds', 30],
-  ['Walnuts', 30],
-  ['Spring mix salad', 50],
-  ['Hazelnuts', 30],
-  ['Cashews', 30],
-  ['Brazil nuts', 15],
-  ['Yogurt 4% fat', 200],
-  ['Milk 3.8% fat', 250],
-  ['Salmon', 150],
-  ['Potatoes', 200],
+  ['Mini pepper', 100],
+  ['Radish', 100],
+  ['Mint', 100],
+  ['Parsley', 100],
+  ['Olive oil', 100],
+  ['Ginger', 100],
+  ['Quinoa', 100],
+  ['Almonds', 100],
+  ['Walnuts', 100],
+  ['Spring mix salad', 100],
+  ['Hazelnuts', 100],
+  ['Cashews', 100],
+  ['Brazil nuts', 100],
+  ['Yogurt 4% fat', 100],
+  ['Milk 3.8% fat', 100],
+  ['Salmon', 100],
+  ['Potatoes', 100],
   ['Asparagus', 100],
   ['Chickpeas', 100],
-  ['Red lentil', 50],
+  ['Red lentil', 100],
   ['Coconut milk', 100],
-  ['Coconut water', 250],
-  ['Firm tofu', 150],
-  ['Coffee', 250],
-  ['Chicken breast', 150],
-  ['Chicken thighs', 150],
+  ['Coconut water', 100],
+  ['Firm tofu', 100],
+  ['Coffee', 100],
+  ['Chicken breast', 100],
+  ['Chicken thighs', 100],
 ];
 
 /** Creates / migrates the schema. Passed as `onInit` to SQLiteProvider. */
@@ -168,7 +168,7 @@ export async function migrateDbIfNeeded(db: SQLiteDatabase): Promise<void> {
     await db.runAsync(
       'INSERT OR IGNORE INTO food_nutrition (name, default_grams) VALUES (?, ?)',
       'Tomato',
-      120,
+      100,
     );
     const VALUES: NutritionSeedValues[] = [
       ['Pumpkin seeds', 30.2, 10.7, 1.4, 6.0, 49.1, 8.7, 0.1, 'E 2.2mg', 'Mg 592mg; Fe 8.8mg; Zn 7.8mg; Cu 1.3mg; Mn 4.5mg'],
@@ -232,6 +232,12 @@ export async function migrateDbIfNeeded(db: SQLiteDatabase): Promise<void> {
         name,
       );
     }
+  }
+
+  if (current < 5) {
+    // v5 normalizes all default servings to 100 g so foods are directly
+    // comparable when quick-added.
+    await db.runAsync('UPDATE food_nutrition SET default_grams = 100');
   }
 
   await db.execAsync(`PRAGMA user_version = ${DB_VERSION}`);
